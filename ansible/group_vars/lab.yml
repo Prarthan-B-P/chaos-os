@@ -1,0 +1,10 @@
+# Ansible runs in a container on the lab network (see ansible/Dockerfile).
+compose_project: chaosos
+api_url: "http://api:8000"
+
+# Safety allowlist: recovery playbooks refuse to touch anything else.
+allowed_services:
+  - api
+  - redis
+  - postgres
+  - frontend

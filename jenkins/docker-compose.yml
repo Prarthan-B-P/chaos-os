@@ -1,0 +1,18 @@
+# Run Jenkins separately from the lab so tearing down the lab never kills CI.
+#   docker compose -f jenkins/docker-compose.yml up -d --build
+name: chaosos-jenkins
+
+services:
+  jenkins:
+    build: .
+    # Runs as root so it can use the Docker socket on Docker Desktop.
+    # Acceptable for a local lab only; never expose this Jenkins publicly.
+    user: root
+    ports:
+      - "8081:8080"   # 8080 is taken by the lab frontend
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  jenkins_home:

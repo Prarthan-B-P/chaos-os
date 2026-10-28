@@ -1,0 +1,33 @@
+# Recovery action: restart one lab service and wait for the API to be ready.
+#   docker compose run --rm --build ansible playbooks/restart_service.yml -e service=redis
+- name: Restart a lab service
+  hosts: lab
+  gather_facts: false
+  tasks:
+    - name: Refuse services outside the safety allowlist
+      ansible.builtin.assert:
+        that: service in allowed_services
+        fail_msg: "Service '{{ service }}' is not in allowed_services; refusing to act."
+
+    - name: Find containers for {{ service }}
+      ansible.builtin.command: >-
+        docker ps -aq
+        --filter label=com.docker.compose.project={{ compose_project }}
+        --filter label=com.docker.compose.service={{ service }}
+      register: containers
+      changed_when: false
+      failed_when: containers.stdout_lines | length == 0
+
+    - name: Restart {{ service }}
+      ansible.builtin.command:
+        argv: "{{ ['docker', 'restart'] + containers.stdout_lines }}"
+      changed_when: true
+
+    - name: Wait for the API to report ready
+      ansible.builtin.uri:
+        url: "{{ api_url }}/ready"
+        status_code: 200
+      register: ready
+      retries: 30
+      delay: 1
+      until: ready.status == 200

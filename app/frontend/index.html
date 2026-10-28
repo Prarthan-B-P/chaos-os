@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CHAOS OS Demo Shop</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    pre { background: #f3f3f3; padding: 1rem; overflow-x: auto; }
+    button { padding: 0.4rem 0.8rem; margin-right: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>CHAOS OS Demo Shop</h1>
+  <p>The target application that CHAOS OS breaks and repairs.</p>
+  <button onclick="call('/api/ready')">Check readiness</button>
+  <button onclick="call('/api/items/' + (1 + Math.floor(Math.random() * 1000)))">Fetch random item</button>
+  <pre id="out">Click a button.</pre>
+  <script>
+    async function call(path) {
+      const out = document.getElementById('out');
+      const start = performance.now();
+      try {
+        const res = await fetch(path);
+        const body = await res.text();
+        out.textContent = `${res.status} in ${(performance.now() - start).toFixed(0)} ms\n${body}`;
+      } catch (err) {
+        out.textContent = `Request failed: ${err}`;
+      }
+    }
+  </script>
+</body>
+</html>

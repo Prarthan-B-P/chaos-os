@@ -1,0 +1,16 @@
+# Recovery action: serve reads straight from Postgres while Redis is unhealthy.
+#   docker compose run --rm --build ansible playbooks/set_cache_bypass.yml -e enabled=true
+- name: Toggle API cache bypass
+  hosts: lab
+  gather_facts: false
+  vars:
+    enabled: true
+  tasks:
+    - name: Set cache bypass to {{ enabled }}
+      ansible.builtin.uri:
+        url: "{{ api_url }}/admin/cache-bypass"
+        method: POST
+        body_format: json
+        body:
+          enabled: "{{ enabled | bool }}"
+        status_code: 200
