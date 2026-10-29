@@ -5,15 +5,16 @@ pipeline {
     options {
         timestamps()
         timeout(time: 30, unit: 'MINUTES')
-        disableConcurrentBuilds()  // experiments share one Docker host
+        disableConcurrentBuilds()  // one build per branch at a time
     }
 
     environment {
-        // Separate project + no host ports (override file skipped), so CI never
-        // touches or clashes with a lab running locally on the same Docker host.
-        COMPOSE_PROJECT_NAME = 'chaosos-ci'
+        // One lab per executor, no host ports (override file skipped): builds of
+        // different branches run side by side without touching each other or a
+        // lab running locally on the same Docker host.
+        COMPOSE_PROJECT_NAME = "chaosos-ci-${env.EXECUTOR_NUMBER}"
         COMPOSE_FILE = 'docker-compose.yml'
-        LAB_NETWORK = 'chaosos-ci_default'
+        LAB_NETWORK = "chaosos-ci-${env.EXECUTOR_NUMBER}_default"
     }
 
     stages {

@@ -13,6 +13,9 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends docker-ce-cli docker-compose-plugin docker-buildx-plugin \
  && rm -rf /var/lib/apt/lists/*
 
+# Jobs as code: copied into JENKINS_HOME on first start if not already there.
+COPY jobs /usr/share/jenkins/ref/jobs
+
 USER jenkins
 RUN jenkins-plugin-cli --plugins \
     workflow-aggregator \
