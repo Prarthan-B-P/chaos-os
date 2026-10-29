@@ -4,7 +4,7 @@ import time
 
 import httpx
 
-from .config import API_URL, LAB_PROJECT, TOXIPROXY_URL
+from .config import API_URL, GRAFANA_AUTH, GRAFANA_URL, LAB_PROJECT, TOXIPROXY_URL
 
 
 def docker(*args: str) -> str:
@@ -29,6 +29,15 @@ def toxiproxy(method: str, path: str, json: dict | None = None) -> None:
     httpx.request(method, f"{TOXIPROXY_URL}{path}", json=json, timeout=5).raise_for_status()
 
 
+def annotate(text: str, tags: list[str]) -> None:
+    """Best-effort Grafana annotation so dashboards show what the experiment did."""
+    try:
+        httpx.post(f"{GRAFANA_URL}/api/annotations", auth=GRAFANA_AUTH, timeout=1,
+                   json={"text": text, "tags": ["chaos", *tags]})
+    except httpx.HTTPError:
+        pass  # observability must never break an experiment
+
+
 def probe() -> dict:
     """What an operator could observe right now via the API's readiness check.
 
@@ -36,7 +45,9 @@ def probe() -> dict:
     the injected fault.
     """
     try:
-        body = httpx.get(f"{API_URL}/ready", timeout=2).json()
+        # 5 s: /ready itself can take ~2 s when Postgres is down (pool timeout),
+        # which must not be mistaken for the API being down.
+        body = httpx.get(f"{API_URL}/ready", timeout=5).json()
         return {"api_up": True, "redis_ok": body["redis"], "postgres_ok": body["postgres"],
                 "redis_ms": body["redis_ms"], "postgres_ms": body["postgres_ms"]}
     except (httpx.HTTPError, ValueError, KeyError):

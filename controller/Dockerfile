@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 COPY ansible /ansible
 COPY controller /app
-COPY resilience-gate.yml /app/resilience-gate.yml
+COPY resilience-gate.yml safety-policy.yml /app/
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1
 ENTRYPOINT ["python", "-m", "chaosctl"]

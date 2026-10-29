@@ -4,6 +4,17 @@
   "schemaVersion": 39,
   "refresh": "5s",
   "time": { "from": "now-15m", "to": "now" },
+  "annotations": {
+    "list": [
+      {
+        "name": "Chaos experiments",
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "iconColor": "#d95926",
+        "target": { "type": "tags", "tags": ["chaos"], "matchAny": true, "limit": 500 }
+      }
+    ]
+  },
   "panels": [
     {
       "type": "timeseries",
@@ -35,10 +46,17 @@
       ]
     },
     {
-      "type": "stat",
-      "title": "Dependencies up / cache bypass",
+      "type": "timeseries",
+      "title": "Dependencies up / cache bypass (1 = yes)",
       "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 1,
+          "custom": { "drawStyle": "line", "lineInterpolation": "stepAfter", "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
       "targets": [
         { "expr": "api_dependency_up", "legendFormat": "{{dependency}}" },
         { "expr": "api_cache_bypass_enabled", "legendFormat": "cache bypass" }

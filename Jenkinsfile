@@ -51,7 +51,9 @@ pipeline {
             }
             post {
                 always {
-                    sh 'docker compose run --rm controller report || true'
+                    sh 'docker compose run --rm -T controller report > resilience-report.txt || true'
+                    sh 'cat resilience-report.txt || true'
+                    archiveArtifacts artifacts: 'resilience-report.txt', allowEmptyArchive: true
                 }
             }
         }

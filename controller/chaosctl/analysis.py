@@ -112,6 +112,19 @@ def recent(samples: list[Sample], now: float, c: RecoveryCriteria) -> list[Sampl
     return out
 
 
+def healthy_streak(samples: list[Sample], now: float, c: RecoveryCriteria,
+                   windows: int = 3) -> bool:
+    """Live: were the last `windows` completion windows all healthy?
+
+    Used to decide whether a recovery step worked before trying another one.
+    """
+    for i in range(windows):
+        lo, hi = now - (i + 1) * c.window_s, now - i * c.window_s
+        if not is_healthy([s for s in samples if lo <= s.completed_at < hi], c):
+            return False
+    return True
+
+
 def recently_unhealthy(samples: list[Sample], now: float, c: RecoveryCriteria) -> bool:
     """Live detector used to decide when to trigger a recovery action."""
     return not is_healthy(recent(samples, now, c), c)

@@ -1,5 +1,5 @@
-# Local-only: publish lab ports on the host. Loaded automatically by
-# `docker compose`; CI skips it (COMPOSE_FILE=docker-compose.yml).
+# Local-only: publish lab ports on the host and run the Evidence Dashboard.
+# Loaded automatically by `docker compose`; CI skips it (COMPOSE_FILE=docker-compose.yml).
 services:
   frontend:
     ports:
@@ -16,3 +16,20 @@ services:
   grafana:
     ports:
       - "3000:3000"
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: dashboard/Dockerfile
+    ports:
+      - "8090:8090"
+    environment:
+      LAB_PROJECT: ${COMPOSE_PROJECT_NAME:-chaosos}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - results:/results
+    depends_on:
+      api:
+        condition: service_healthy

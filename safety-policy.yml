@@ -1,0 +1,27 @@
+# Safety policy - every proposed recovery action is checked against this
+# file BEFORE it runs, whichever policy proposed it (rules, bandit, or LLM).
+# The Ansible playbooks enforce their own service allowlist as a second layer.
+
+environment:
+  # Only act on approved, isolated lab projects (fnmatch patterns).
+  allowed_projects: ["chaosos", "chaosos-ci-*"]
+
+limits:
+  # At most this many actions per incident; each action at most once
+  # (prevents restart loops, a classic automation failure).
+  max_actions_per_incident: 3
+
+approval:
+  # High-impact actions need approval. "auto" = approved and logged (isolated
+  # lab only); "deny" = always blocked. Override with CHAOS_HIGH_IMPACT_APPROVAL.
+  high_impact: auto
+
+actions:
+  # impact: none | low | medium | high
+  # cost:   penalty in [0, 1] subtracted from the learning reward
+  none:             {impact: none,   cost: 0.00}
+  warm_cache:       {impact: low,    cost: 0.02}   # one bulk query
+  cache_bypass:     {impact: low,    cost: 0.05}   # degraded mode: every read hits the DB
+  restart_redis:    {impact: medium, cost: 0.05}   # drops the whole cache
+  restart_api:      {impact: medium, cost: 0.10}   # drops in-flight requests
+  restart_postgres: {impact: high,   cost: 0.20}   # drops every DB connection

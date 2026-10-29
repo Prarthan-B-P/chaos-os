@@ -75,6 +75,9 @@ services:
     profiles: ["tools"]
     environment:
       LAB_PROJECT: ${COMPOSE_PROJECT_NAME:-chaosos}
+      # Optional gen-AI features; read from the git-ignored .env file.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - results:/results
