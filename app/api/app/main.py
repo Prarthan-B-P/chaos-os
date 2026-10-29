@@ -174,7 +174,7 @@ def get_flags() -> dict:
 
 @app.post("/admin/cache-bypass")
 def set_cache_bypass(body: CacheBypassRequest) -> dict:
-    flags["cache_bypass"] = body.enabled
+    flags["cache-bypass"] = body.enabled  # BUG (intentional demo): wrong key, flag never takes effect
     CACHE_BYPASS.set(int(body.enabled))
     return flags
 
