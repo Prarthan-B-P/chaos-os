@@ -136,7 +136,10 @@ All numbers below come from the experiment database. Load is 20 req/s, so a
 | `postgres_latency` | ✕ 0/2 | ✓ 9.8 s | ✓ 32.7 s (10–55 s) | ✕ 0/2 |
 | `postgres_down` | ✓ 7.4 s | ✓ 8.0 s | ✓ 43.2 s (8–79 s) | ✓ 12.0 s |
 | `api_crash` | ✓ 16.1 s | ✓ 16.0 s | ✓ 16.0 s | ✓ 16.1 s |
-| **Recovered** | **6/10** | **10/10** | **10/10** | **8/10** |
+| **Recovered** | **6/10** | **12/12*** | **10/10** | **8/10** |
+
+\* The heuristic has two extra early runs (one each on `redis_latency` and
+`postgres_down`, made while testing the remediation loop); both recovered.
 
 The runbook fails exactly where "restart it" is the wrong answer. The bandit
 matches the expert rules on recovery rate. Its two slow outliers came from a
