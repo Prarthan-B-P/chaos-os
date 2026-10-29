@@ -29,6 +29,21 @@ def toxiproxy(method: str, path: str, json: dict | None = None) -> None:
     httpx.request(method, f"{TOXIPROXY_URL}{path}", json=json, timeout=5).raise_for_status()
 
 
+def probe() -> dict:
+    """What an operator could observe right now via the API's readiness check.
+
+    Policies must decide from observations like these, never from the name of
+    the injected fault.
+    """
+    try:
+        body = httpx.get(f"{API_URL}/ready", timeout=2).json()
+        return {"api_up": True, "redis_ok": body["redis"], "postgres_ok": body["postgres"],
+                "redis_ms": body["redis_ms"], "postgres_ms": body["postgres_ms"]}
+    except (httpx.HTTPError, ValueError, KeyError):
+        return {"api_up": False, "redis_ok": None, "postgres_ok": None,
+                "redis_ms": None, "postgres_ms": None}
+
+
 def wait_until_ready(timeout_s: float = 60) -> None:
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:

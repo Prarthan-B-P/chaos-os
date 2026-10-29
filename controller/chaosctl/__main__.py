@@ -2,25 +2,41 @@
 
   python -m chaosctl list
   python -m chaosctl run --scenario redis_down --action restart_redis,cache_bypass --reps 3
+  python -m chaosctl run --scenario all --action all        # all = training scenarios
   python -m chaosctl report
-  python -m chaosctl gate --scenario redis_down --action restart_redis --max-recovery 30
+  python -m chaosctl gate --config resilience-gate.yml
 """
 import argparse
 import asyncio
 import sys
 
+import yaml
+
 from . import store
 from .actions import ACTIONS
 from .experiment import TrialResult, run_trial
-from .scenarios import SCENARIOS
+from .scenarios import HELD_OUT, SCENARIOS, TRAINING
+
+SCENARIO_GROUPS = {"all": TRAINING, "held_out": HELD_OUT}
 
 
-def _pick(value: str, options: dict, kind: str) -> list:
-    names = list(options) if value == "all" else value.split(",")
+def _pick(value: str, options: dict, groups: dict, kind: str) -> list:
+    if value in groups:
+        return list(groups[value].values())
+    names = value.split(",")
     unknown = [n for n in names if n not in options]
     if unknown:
-        sys.exit(f"unknown {kind}: {', '.join(unknown)} (choose from {', '.join(options)})")
+        sys.exit(f"unknown {kind}: {', '.join(unknown)} "
+                 f"(choose from {', '.join([*groups, *options])})")
     return [options[n] for n in names]
+
+
+def _scenarios(value: str) -> list:
+    return _pick(value, SCENARIOS, SCENARIO_GROUPS, "scenario")
+
+
+def _actions(value: str) -> list:
+    return _pick(value, ACTIONS, {"all": ACTIONS}, "action")
 
 
 def _describe(t: TrialResult) -> str:
@@ -33,7 +49,6 @@ def _describe(t: TrialResult) -> str:
     action = ("" if t.action == "none" or t.action_ok is None
               else f", action {'ok' if t.action_ok else 'FAILED'} in {t.action_duration_s:.1f}s")
     return (f"{outcome} (detected after {t.detected_after_s:.1f}s{action}); "
-            f"availability {t.incident_availability:.1%}, "
             f"{t.incident_failures}/{t.incident_requests} requests failed")
 
 
@@ -42,10 +57,11 @@ def _run(scenarios, actions, reps: int) -> list[TrialResult]:
     for scenario in scenarios:
         for action in actions:
             for rep in range(1, reps + 1):
-                print(f"[{scenario.name} / {action.name} #{rep}] running...", flush=True)
+                label = f"[{scenario.name} / {action.name} #{rep}]"
+                print(f"{label} running...", flush=True)
                 trial = asyncio.run(run_trial(scenario, action))
                 store.save(trial)
-                print(f"[{scenario.name} / {action.name} #{rep}] {_describe(trial)}", flush=True)
+                print(f"{label} {_describe(trial)}", flush=True)
                 results.append(trial)
     return results
 
@@ -57,15 +73,14 @@ def _fmt(x: float | None, spec: str, unit: str = "") -> str:
 def cmd_list(_args) -> None:
     print("Scenarios:")
     for s in SCENARIOS.values():
-        print(f"  {s.name:<16} {s.description}")
+        print(f"  {s.name:<20} {s.description}{'  [held out]' if s.held_out else ''}")
     print("Actions:")
     for a in ACTIONS.values():
-        print(f"  {a.name:<16} {a.description}")
+        print(f"  {a.name:<20} {a.description}")
 
 
 def cmd_run(args) -> None:
-    _run(_pick(args.scenario, SCENARIOS, "scenario"), _pick(args.action, ACTIONS, "action"),
-         args.reps)
+    _run(_scenarios(args.scenario), _actions(args.action), args.reps)
     cmd_report(args)
 
 
@@ -74,26 +89,34 @@ def cmd_report(_args) -> None:
     if not rows:
         print("No valid trials recorded yet.")
         return
-    print(f"\n{'scenario':<15} {'action':<15} {'recovered':>9} {'median':>8} "
-          f"{'min-max':>13} {'availability':>12}")
+    print(f"\n{'scenario':<19} {'action':<17} {'recovered':>9} {'median':>8} "
+          f"{'min-max':>11} {'failed req':>10}")
     for r in rows:
         spread = f"{_fmt(r['min_s'], '.1f')}-{_fmt(r['max_s'], '.1f')}s" if r["recovered"] else "-"
-        print(f"{r['scenario']:<15} {r['action']:<15} {r['recovered']:>4}/{r['trials']:<4} "
-              f"{_fmt(r['median_s'], '.1f', 's'):>8} {spread:>13} {r['availability']:>12.1%}")
+        print(f"{r['scenario']:<19} {r['action']:<17} {r['recovered']:>4}/{r['trials']:<4} "
+              f"{_fmt(r['median_s'], '.1f', 's'):>8} {spread:>11} {r['failed_requests']:>10.0f}")
 
 
 def cmd_gate(args) -> None:
-    trials = _run(_pick(args.scenario, SCENARIOS, "scenario"),
-                  _pick(args.action, ACTIONS, "action"), args.reps)
-    failures = [
-        t for t in trials
-        if not (t.valid and t.recovered and t.recovery_time_s <= args.max_recovery)
-    ]
+    with open(args.config) as f:
+        checks = yaml.safe_load(f)["checks"]
+
+    failures = 0
+    for check in checks:
+        limit = float(check["max_recovery_s"])
+        trials = _run(_scenarios(check["scenario"]), _actions(check["action"]),
+                      int(check.get("reps", 1)))
+        for t in trials:
+            passed = t.valid and t.recovered and t.recovery_time_s <= limit
+            failures += not passed
+            print(f"  {'PASS' if passed else 'FAIL'}: {t.scenario} -> {t.action} "
+                  f"must recover within {limit:.0f}s "
+                  f"(got {_fmt(t.recovery_time_s, '.1f', 's') if t.recovered else 'no recovery'})",
+                  flush=True)
+
     if failures:
-        sys.exit(f"RESILIENCE GATE FAILED: {len(failures)}/{len(trials)} trials missed "
-                 f"'recovered within {args.max_recovery:.0f}s'")
-    print(f"RESILIENCE GATE PASSED: all {len(trials)} trials recovered within "
-          f"{args.max_recovery:.0f}s")
+        sys.exit(f"RESILIENCE GATE FAILED: {failures} check(s) missed their recovery limit")
+    print("RESILIENCE GATE PASSED")
 
 
 def main() -> None:
@@ -103,16 +126,16 @@ def main() -> None:
     sub.add_parser("list", help="show scenarios and actions").set_defaults(func=cmd_list)
     sub.add_parser("report", help="summarise recorded trials").set_defaults(func=cmd_report)
 
-    for name, func, help_text in [("run", cmd_run, "run experiments and record results"),
-                                  ("gate", cmd_gate, "run experiments; exit 1 if recovery is too slow")]:
-        p = sub.add_parser(name, help=help_text)
-        p.add_argument("--scenario", required=True, help="name, comma list, or 'all'")
-        p.add_argument("--action", required=True, help="name, comma list, or 'all'")
-        p.add_argument("--reps", type=int, default=1)
-        if name == "gate":
-            p.add_argument("--max-recovery", type=float, default=30,
-                           help="seconds from injection to sustained recovery")
-        p.set_defaults(func=func)
+    run = sub.add_parser("run", help="run experiments and record results")
+    run.add_argument("--scenario", required=True,
+                     help="name, comma list, 'all' (training) or 'held_out'")
+    run.add_argument("--action", required=True, help="name, comma list, or 'all'")
+    run.add_argument("--reps", type=int, default=1)
+    run.set_defaults(func=cmd_run)
+
+    gate = sub.add_parser("gate", help="run the checks in a gate file; exit 1 on any failure")
+    gate.add_argument("--config", default="resilience-gate.yml")
+    gate.set_defaults(func=cmd_gate)
 
     args = parser.parse_args()
     args.func(args)

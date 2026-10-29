@@ -17,6 +17,11 @@ def _connect() -> sqlite3.Connection:
         f"CREATE TABLE IF NOT EXISTS trials (id INTEGER PRIMARY KEY AUTOINCREMENT, "
         f"{', '.join(_COLUMNS)})"
     )
+    # Additive migration: older databases get new columns (as NULL) instead of breaking.
+    existing = {row[1] for row in conn.execute("PRAGMA table_info(trials)")}
+    for column in _COLUMNS:
+        if column not in existing:
+            conn.execute(f"ALTER TABLE trials ADD COLUMN {column}")
     return conn
 
 
@@ -34,7 +39,7 @@ def summary() -> list[dict]:
     with _connect() as conn:
         conn.row_factory = sqlite3.Row
         rows = conn.execute(
-            "SELECT scenario, action, recovered, recovery_time_s, incident_availability "
+            "SELECT scenario, action, recovered, recovery_time_s, incident_failures "
             "FROM trials WHERE valid = 1 ORDER BY scenario, action"
         ).fetchall()
 
@@ -53,6 +58,6 @@ def summary() -> list[dict]:
             "median_s": statistics.median(times) if times else None,
             "min_s": min(times) if times else None,
             "max_s": max(times) if times else None,
-            "availability": statistics.mean(t["incident_availability"] for t in trials),
+            "failed_requests": statistics.mean(t["incident_failures"] for t in trials),
         })
     return out

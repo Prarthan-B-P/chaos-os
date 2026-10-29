@@ -1,0 +1,15 @@
+# Recovery action: preload every item into Redis with a long TTL, so a slow
+# database stops sitting on the request path.
+#   docker compose run --rm --build ansible playbooks/warm_cache.yml -e ttl_seconds=600
+- name: Warm the API cache
+  hosts: lab
+  gather_facts: false
+  vars:
+    ttl_seconds: 600
+  tasks:
+    - name: Load all items into Redis (TTL {{ ttl_seconds }}s)
+      ansible.builtin.uri:
+        url: "{{ api_url }}/admin/warm-cache?ttl_seconds={{ ttl_seconds }}"
+        method: POST
+        status_code: 200
+        timeout: 10

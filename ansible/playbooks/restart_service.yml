@@ -27,6 +27,7 @@
       ansible.builtin.uri:
         url: "{{ api_url }}/ready"
         status_code: 200
+        timeout: 2   # a hung /ready must not stall the playbook
       register: ready
       retries: 30
       delay: 1

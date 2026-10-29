@@ -102,11 +102,16 @@ def analyze(samples: list[Sample], inject_at: float, end_at: float,
     )
 
 
-def recently_unhealthy(samples: list[Sample], now: float, c: RecoveryCriteria) -> bool:
-    """Live detector: are requests that *completed* in the last window unhealthy?"""
-    recent = []
+def recent(samples: list[Sample], now: float, c: RecoveryCriteria) -> list[Sample]:
+    """Requests that *completed* in the last window (live view, no waiting for timeouts)."""
+    out = []
     for s in reversed(samples):  # samples are in completion order
         if s.completed_at < now - c.window_s:
             break
-        recent.append(s)
-    return not is_healthy(recent, c)
+        out.append(s)
+    return out
+
+
+def recently_unhealthy(samples: list[Sample], now: float, c: RecoveryCriteria) -> bool:
+    """Live detector used to decide when to trigger a recovery action."""
+    return not is_healthy(recent(samples, now, c), c)

@@ -46,9 +46,8 @@ pipeline {
 
         stage('Resilience gate') {
             steps {
-                // The release must recover from each failure with its known-good playbook.
-                sh 'docker compose run --rm controller gate --scenario redis_down --action restart_redis --max-recovery 10'
-                sh 'docker compose run --rm controller gate --scenario all --action cache_bypass --max-recovery 10'
+                // Checks and limits live in resilience-gate.yml (policy as code).
+                sh 'docker compose run --rm controller gate'
             }
             post {
                 always {

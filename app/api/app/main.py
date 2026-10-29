@@ -34,6 +34,8 @@ db_pool = ConnectionPool(
     max_size=10,
     timeout=2,
     kwargs={"connect_timeout": 2, "options": "-c statement_timeout=2000"},
+    # Discard connections that died (e.g. Postgres restarted) instead of failing a request.
+    check=ConnectionPool.check_connection,
     open=False,
 )
 
@@ -79,25 +81,29 @@ async def record_metrics(request: Request, call_next):
             REQUESTS.labels(endpoint, str(status)).inc()
 
 
-def check_redis() -> bool:
+def check_redis() -> tuple[bool, float]:
+    """(reachable, probe time in ms)."""
+    start = time.perf_counter()
     try:
         cache.ping()
-        DEPENDENCY_UP.labels("redis").set(1)
-        return True
+        ok = True
     except redis.RedisError:
-        DEPENDENCY_UP.labels("redis").set(0)
-        return False
+        ok = False
+    DEPENDENCY_UP.labels("redis").set(int(ok))
+    return ok, (time.perf_counter() - start) * 1000
 
 
-def check_postgres() -> bool:
+def check_postgres() -> tuple[bool, float]:
+    """(reachable, probe time in ms)."""
+    start = time.perf_counter()
     try:
         with db_pool.connection() as conn:
             conn.execute("SELECT 1")
-        DEPENDENCY_UP.labels("postgres").set(1)
-        return True
+        ok = True
     except Exception:
-        DEPENDENCY_UP.labels("postgres").set(0)
-        return False
+        ok = False
+    DEPENDENCY_UP.labels("postgres").set(int(ok))
+    return ok, (time.perf_counter() - start) * 1000
 
 
 @app.get("/health")
@@ -108,16 +114,21 @@ def health() -> dict:
 
 @app.get("/ready")
 def ready(response: Response) -> dict:
-    """Readiness: dependencies needed to serve traffic are reachable."""
-    redis_ok = flags["cache_bypass"] or check_redis()
-    postgres_ok = check_postgres()
-    ok = redis_ok and postgres_ok
+    """Readiness: dependencies needed to serve traffic are reachable.
+
+    Also reports probe latencies, which the controller records as symptoms.
+    """
+    redis_ok, redis_ms = check_redis()
+    postgres_ok, postgres_ms = check_postgres()
+    ok = (redis_ok or flags["cache_bypass"]) and postgres_ok
     if not ok:
         response.status_code = 503
     return {
         "status": "ready" if ok else "degraded",
         "redis": redis_ok,
         "postgres": postgres_ok,
+        "redis_ms": round(redis_ms, 1),
+        "postgres_ms": round(postgres_ms, 1),
         "cache_bypass": flags["cache_bypass"],
     }
 
@@ -177,6 +188,30 @@ def set_cache_bypass(body: CacheBypassRequest) -> dict:
     flags["cache_bypass"] = body.enabled
     CACHE_BYPASS.set(int(body.enabled))
     return flags
+
+
+@app.post("/admin/warm-cache")
+def warm_cache(ttl_seconds: int = CACHE_TTL_SECONDS) -> dict:
+    """Load every item into Redis with a single query.
+
+    Recovery action for a slow database: one slow query instead of one per request.
+    Uses its own connection, not the request pool: when the database is slow the
+    pool is exhausted by traffic, and the fix must not queue behind the problem.
+    """
+    try:
+        with psycopg.connect(DATABASE_URL, connect_timeout=5) as conn:
+            rows = conn.execute("SELECT id, name, price FROM items").fetchall()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="database unavailable") from exc
+    try:
+        pipe = cache.pipeline(transaction=False)
+        for item_id, name, price in rows:
+            item = {"id": item_id, "name": name, "price": float(price)}
+            pipe.setex(f"item:{item_id}", ttl_seconds, json.dumps(item))
+        pipe.execute()
+    except redis.RedisError as exc:
+        raise HTTPException(status_code=503, detail="cache unavailable") from exc
+    return {"warmed": len(rows), "ttl_seconds": ttl_seconds}
 
 
 @app.get("/metrics")

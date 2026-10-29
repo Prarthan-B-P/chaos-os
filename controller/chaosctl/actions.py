@@ -31,19 +31,29 @@ ACTIONS = {
         Action("none", "Do nothing (baseline)", None, {}),
         Action("restart_redis", "Restart the Redis container",
                "playbooks/restart_service.yml", {"service": "redis"}),
+        Action("restart_postgres", "Restart the Postgres container",
+               "playbooks/restart_service.yml", {"service": "postgres"}),
+        Action("restart_api", "Restart the API container",
+               "playbooks/restart_service.yml", {"service": "api"}),
         Action("cache_bypass", "Serve reads from Postgres, skipping Redis",
                "playbooks/set_cache_bypass.yml", {"enabled": "true"}),
+        Action("warm_cache", "Preload all items into Redis with a 10 min TTL",
+               "playbooks/warm_cache.yml", {"ttl_seconds": "600"}),
     ]
 }
 
 
-def run_action(action: Action) -> ActionResult:
+def run_action(action: Action, timeout_s: float = 45) -> ActionResult:
     if action.playbook is None:
         return ActionResult(ok=True, duration_s=0.0, output_tail="")
     cmd = ["ansible-playbook", action.playbook, "-e", f"compose_project={LAB_PROJECT}"]
     for key, value in action.extra_vars.items():
         cmd += ["-e", f"{key}={value}"]
     start = time.monotonic()
-    result = subprocess.run(cmd, cwd=ANSIBLE_DIR, capture_output=True, text=True)
+    try:
+        result = subprocess.run(cmd, cwd=ANSIBLE_DIR, capture_output=True, text=True,
+                                timeout=timeout_s)
+    except subprocess.TimeoutExpired:
+        return ActionResult(False, time.monotonic() - start, f"timed out after {timeout_s:.0f}s")
     tail = "\n".join((result.stdout + result.stderr).strip().splitlines()[-5:])
     return ActionResult(result.returncode == 0, time.monotonic() - start, tail)

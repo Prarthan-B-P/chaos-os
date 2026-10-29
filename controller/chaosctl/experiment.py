@@ -5,7 +5,8 @@ from datetime import datetime, timezone
 
 from . import lab
 from .actions import Action, run_action
-from .analysis import RecoveryCriteria, analyze, is_healthy, recently_unhealthy, window_summary
+from .analysis import (RecoveryCriteria, analyze, is_healthy, recent, recently_unhealthy,
+                       window_summary)
 from .config import API_URL
 from .load import LoadGenerator
 from .scenarios import Scenario
@@ -29,6 +30,14 @@ class TrialResult:
     incident_failures: int
     incident_requests: int
     incident_p95_ms: float | None
+    # Symptoms observed at detection time - the context a policy may use.
+    sym_error_rate: float | None = None
+    sym_p95_ms: float | None = None
+    sym_api_up: bool | None = None
+    sym_redis_ok: bool | None = None
+    sym_postgres_ok: bool | None = None
+    sym_redis_ms: float | None = None
+    sym_postgres_ms: float | None = None
 
 
 async def run_trial(scenario: Scenario, action: Action,
@@ -43,6 +52,7 @@ async def run_trial(scenario: Scenario, action: Action,
     load_task = asyncio.create_task(load.run(stop))
     detected_at = None
     action_result = None
+    symptoms: dict = {}
     try:
         await asyncio.sleep(warmup_s)
         inject_at = load.now()
@@ -55,6 +65,12 @@ async def run_trial(scenario: Scenario, action: Action,
                 break
 
         if detected_at is not None:
+            success, p95_ms = window_summary(recent(load.samples, load.now(), criteria))
+            symptoms = {
+                "sym_error_rate": None if success is None else 1 - success,
+                "sym_p95_ms": p95_ms,
+                **{f"sym_{k}": v for k, v in (await asyncio.to_thread(lab.probe)).items()},
+            }
             # The load keeps running in the background while the playbook executes.
             action_result = await asyncio.to_thread(run_action, action)
             while load.now() < inject_at + timeout_s:
@@ -93,4 +109,5 @@ async def run_trial(scenario: Scenario, action: Action,
         incident_failures=result.incident_failures,
         incident_requests=result.incident_requests,
         incident_p95_ms=r(result.incident_p95_ms),
+        **{k: r(v) if isinstance(v, float) else v for k, v in symptoms.items()},
     )
