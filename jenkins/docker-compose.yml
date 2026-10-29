@@ -5,6 +5,7 @@ name: chaosos-jenkins
 services:
   jenkins:
     build: .
+    restart: unless-stopped   # come back automatically when Docker Desktop starts
     # Runs as root so it can use the Docker socket on Docker Desktop.
     # Acceptable for a local lab only; never expose this Jenkins publicly.
     user: root

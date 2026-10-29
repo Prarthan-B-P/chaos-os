@@ -1,21 +1,21 @@
 # CHAOS OS lab: the target application plus its observability stack.
 # All config is baked into images (no bind mounts) so Jenkins can run this
 # file through the host Docker socket.
+#
+# Host ports live in docker-compose.override.yml, which `docker compose` loads
+# automatically for local use. CI sets COMPOSE_FILE=docker-compose.yml to skip
+# it, so a CI copy of the lab never clashes with a local one.
 name: chaosos
 
 services:
   frontend:
     build: ./app/frontend
-    ports:
-      - "8080:80"
     depends_on:
       api:
         condition: service_healthy
 
   api:
     build: ./app/api
-    ports:
-      - "8000:8000"
     environment:
       # Dependencies are reached through Toxiproxy so faults can be injected.
       DATABASE_URL: postgresql://shop:shop@toxiproxy:15432/shop
@@ -54,25 +54,31 @@ services:
   toxiproxy:
     build: ./chaos/toxiproxy
     command: ["-host=0.0.0.0", "-config=/config/toxiproxy.json"]
-    ports:
-      - "8474:8474"   # Toxiproxy control API used by the chaos runner
 
   prometheus:
     build: ./observability/prometheus
-    ports:
-      - "9090:9090"
 
   grafana:
     build: ./observability/grafana
-    ports:
-      - "3000:3000"
     environment:
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
     depends_on:
       - prometheus
 
-  # On-demand tool, not started by `up`:
+  # On-demand tools (profile "tools"), not started by `up`:
+  #   docker compose run --rm --build controller run --scenario redis_down --action all
+  controller:
+    build:
+      context: .
+      dockerfile: controller/Dockerfile
+    profiles: ["tools"]
+    environment:
+      LAB_PROJECT: ${COMPOSE_PROJECT_NAME:-chaosos}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - results:/results
+
   #   docker compose run --rm --build ansible playbooks/<name>.yml -e ...
   ansible:
     build: ./ansible
@@ -82,3 +88,4 @@ services:
 
 volumes:
   pgdata:
+  results:

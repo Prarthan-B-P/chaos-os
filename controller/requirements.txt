@@ -1,0 +1,2 @@
+httpx==0.27.2
+ansible-core==2.17.5

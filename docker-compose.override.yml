@@ -1,0 +1,18 @@
+# Local-only: publish lab ports on the host. Loaded automatically by
+# `docker compose`; CI skips it (COMPOSE_FILE=docker-compose.yml).
+services:
+  frontend:
+    ports:
+      - "8080:80"
+  api:
+    ports:
+      - "8000:8000"
+  toxiproxy:
+    ports:
+      - "8474:8474"   # Toxiproxy control API
+  prometheus:
+    ports:
+      - "9090:9090"
+  grafana:
+    ports:
+      - "3000:3000"

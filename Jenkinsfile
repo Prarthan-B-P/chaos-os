@@ -1,4 +1,4 @@
-// CHAOS OS pipeline: build -> deploy lab -> smoke test -> resilience gate -> teardown.
+// CHAOS OS pipeline: build -> unit tests -> deploy lab -> smoke test -> resilience gate -> teardown.
 pipeline {
     agent any
 
@@ -9,14 +9,23 @@ pipeline {
     }
 
     environment {
-        COMPOSE_PROJECT_NAME = 'chaosos'
-        LAB_NETWORK = 'chaosos_default'
+        // Separate project + no host ports (override file skipped), so CI never
+        // touches or clashes with a lab running locally on the same Docker host.
+        COMPOSE_PROJECT_NAME = 'chaosos-ci'
+        COMPOSE_FILE = 'docker-compose.yml'
+        LAB_NETWORK = 'chaosos-ci_default'
     }
 
     stages {
         stage('Build images') {
             steps {
-                sh 'docker compose build'
+                sh 'docker compose --profile tools build'
+            }
+        }
+
+        stage('Unit tests') {
+            steps {
+                sh 'docker compose run --rm --entrypoint python controller -m unittest discover -s tests -v'
             }
         }
 
@@ -36,8 +45,14 @@ pipeline {
 
         stage('Resilience gate') {
             steps {
-                // Phase 3+: run chaos experiments and fail the build when recovery misses the SLO.
-                echo 'No resilience experiments yet - added in Phase 3.'
+                // The release must recover from each failure with its known-good playbook.
+                sh 'docker compose run --rm controller gate --scenario redis_down --action restart_redis --max-recovery 10'
+                sh 'docker compose run --rm controller gate --scenario all --action cache_bypass --max-recovery 10'
+            }
+            post {
+                always {
+                    sh 'docker compose run --rm controller report || true'
+                }
             }
         }
     }
@@ -46,7 +61,7 @@ pipeline {
         always {
             sh 'docker compose logs --no-color > lab-logs.txt || true'
             archiveArtifacts artifacts: 'lab-logs.txt', allowEmptyArchive: true
-            sh 'docker compose down -v --remove-orphans || true'
+            sh 'docker compose --profile tools down -v --remove-orphans || true'
         }
     }
 }
