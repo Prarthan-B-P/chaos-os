@@ -96,7 +96,7 @@ export default function App() {
         <div className="container">
           <span>CHAOS OS — break it. learn from it. build infrastructure that survives it.</span>
           <a href={LINKS.grafana} target="_blank" rel="noreferrer">Grafana ↗</a>
-          <a href={LINKS.jenkins} target="_blank" rel="noreferrer">Jenkins ↗</a>
+          {LINKS.jenkins && <a href={LINKS.jenkins} target="_blank" rel="noreferrer">Jenkins ↗</a>}
           <a href={LINKS.github} target="_blank" rel="noreferrer">GitHub ↗</a>
         </div>
       </footer>

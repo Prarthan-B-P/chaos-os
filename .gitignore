@@ -6,3 +6,7 @@ lab-logs.txt
 results/
 *.sqlite
 *.db
+
+# Deployment secrets and exported history (never commit)
+deploy/secrets.yml
+deploy/seed/

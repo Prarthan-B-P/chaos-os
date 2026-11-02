@@ -56,9 +56,15 @@ export const POLICY_LABELS = {
 
 export const POLICY_TAGS = { rule_based: "runbook", heuristic: "expert", bandit: "learned", llm: "gen ai" };
 
+// Locally the dashboard is served on :8090 and the other tools on their own ports.
+// Deployed, everything sits behind the Caddy proxy: Grafana under /grafana on the
+// same origin, and Jenkins is private (not linked).
+const proxied = window.location.port !== "8090";
 export const LINKS = {
-  grafana: `http://${window.location.hostname}:3000/d/chaos-os-service-health`,
-  jenkins: `http://${window.location.hostname}:8081/job/chaos-os-ci/`,
+  grafana: proxied
+    ? "/grafana/d/chaos-os-service-health"
+    : `http://${window.location.hostname}:3000/d/chaos-os-service-health`,
+  jenkins: proxied ? null : `http://${window.location.hostname}:8081/job/chaos-os-ci/`,
   github: "https://github.com/Prarthan-B-P/chaos-os",
 };
 

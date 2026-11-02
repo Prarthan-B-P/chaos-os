@@ -285,6 +285,20 @@ builds every branch, and polls GitHub every 5 minutes. Each build gets its own
 isolated lab (`chaosos-ci-<executor>`, no host ports) and archives a
 resilience report.
 
+### Deploy to a server
+
+[deploy/README.md](deploy/README.md) puts CHAOS OS on a cloud VM (e.g. Oracle
+Cloud Always Free) at an HTTPS address with a login, in one command:
+
+```powershell
+.\deploy\deploy.ps1 -Server <public-ip>
+```
+
+An Ansible playbook provisions the server (firewall, Docker, code, secrets) and
+starts the production overlay, where **Caddy** is the only public entry point:
+automatic HTTPS, a login in front of the dashboard and Grafana, and nothing
+else exposed.
+
 ---
 
 ## Project layout
@@ -297,6 +311,7 @@ dashboard/        evidence dashboard: React frontend + FastAPI backend
 ansible/          recovery playbooks + service allowlist
 observability/    Prometheus and Grafana (dashboard + experiment annotations)
 jenkins/          Jenkins image and job-as-code
+deploy/           production overlay (Caddy, HTTPS, login) + Ansible server provisioning
 safety-policy.yml safety rules every action is checked against
 resilience-gate.yml  release gate checks
 Jenkinsfile       CI pipeline
