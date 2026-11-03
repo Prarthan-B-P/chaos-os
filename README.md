@@ -299,6 +299,9 @@ starts the production overlay, where **Caddy** is the only public entry point:
 automatic HTTPS, a login in front of the dashboard and Grafana, and nothing
 else exposed.
 
+No server? `.\deploy\share.ps1` shares the lab from your own computer through a
+free Cloudflare tunnel (no account or card), behind the same login.
+
 ---
 
 ## Project layout
@@ -311,7 +314,7 @@ dashboard/        evidence dashboard: React frontend + FastAPI backend
 ansible/          recovery playbooks + service allowlist
 observability/    Prometheus and Grafana (dashboard + experiment annotations)
 jenkins/          Jenkins image and job-as-code
-deploy/           production overlay (Caddy, HTTPS, login) + Ansible server provisioning
+deploy/           production overlay (Caddy, HTTPS, login), Ansible server provisioning, laptop sharing tunnel
 safety-policy.yml safety rules every action is checked against
 resilience-gate.yml  release gate checks
 Jenkinsfile       CI pipeline

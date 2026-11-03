@@ -1,0 +1,16 @@
+# Share the lab from this computer instead of a server (no account or card):
+#   .\deploy\share.ps1   (or deploy/share.sh)
+#
+# cloudflared dials out to Cloudflare, which serves the lab at a random
+# https://<words>.trycloudflare.com address. Caddy still asks for the login but
+# publishes no host port, so nothing on this computer is opened to the network.
+services:
+  caddy:
+    ports: !reset []
+
+  tunnel:
+    image: cloudflare/cloudflared:2024.10.1
+    command: tunnel --no-autoupdate --url http://caddy:80
+    # A restarted quick tunnel gets a new address, so it never comes back on its
+    # own (for example after a reboot); run share again for a fresh link.
+    restart: "no"

@@ -12,6 +12,43 @@ internet ──HTTPS──► Caddy (login, certificates) ──► dashboard
 Jenkins is **not** deployed: CI keeps running on your laptop. The dashboard can
 run experiments and spend the OpenAI key, so it is never served without a login.
 
+Two ways to put it online:
+
+| | Share from your laptop | Your own server |
+|---|---|---|
+| Needs | Docker Desktop, `deploy/secrets.yml` | A cloud VM (usually a card or student credit) |
+| Address | random `https://<words>.trycloudflare.com`, new each time | fixed `https://<ip>.sslip.io` or your domain |
+| Online | while your laptop is awake | 24/7 |
+| Command | `.\deploy\share.ps1` | `.\deploy\deploy.ps1 -Server <ip>` |
+
+## Share from your laptop (no server, account or card)
+
+1. Fill in the secrets (section 2 below). Only the two passwords are needed.
+2. With Docker Desktop running:
+   ```powershell
+   .\deploy\share.ps1
+   ```
+   It ends with `CHAOS OS is shared at https://<words>.trycloudflare.com`. Send
+   that link and the login to whoever should see it.
+3. When you are done: `.\deploy\share.ps1 -Stop` (back to the normal local lab).
+
+The lab runs on Docker Desktop as usual, now with the history you already
+have and the OpenAI key from your local `.env`. A free Cloudflare quick tunnel
+dials out to Cloudflare, so no router or firewall port is opened. Keep the
+laptop plugged in with sleep off during a demo. If the link stops working, run
+the command again to get a new one.
+
+## No card for a server?
+
+- **Azure for Students:** $100 credit, verified with your college email and no
+  card (https://azure.microsoft.com/free/students). Create an Ubuntu 24.04 VM
+  of size `B2s` (4 GB) or larger, allow inbound SSH, HTTP and HTTPS, then use the
+  same deploy with Azure's user name:
+  `.\deploy\deploy.ps1 -Server <ip> -User azureuser`. Stop the VM when you
+  don't need it to make the credit last.
+- **Oracle Cloud** (below) often accepts a Visa or Mastercard *debit* card with
+  online/international payments switched on. It is only used for verification.
+
 ## 1. Create a free server (Oracle Cloud, about 15 minutes)
 
 1. **SSH key** (once, on your laptop, in PowerShell). Press Enter at every question:
