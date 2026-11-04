@@ -1,0 +1,20 @@
+# Routes SLO alerts to the on-call agent (controller/chaosctl/oncall.py).
+# The agent acts on severity=page and ignores tickets; it confirms every page
+# with its own probe traffic, so a repeat notification is a cheap re-check.
+route:
+  receiver: oncall-agent
+  group_by: [alertname]
+  group_wait: 1s          # page immediately: the alert rules already filter blips
+  group_interval: 10s
+  repeat_interval: 1m     # still firing? remind the agent (it re-checks)
+
+receivers:
+  - name: oncall-agent
+    webhook_configs:
+      - url: http://oncall:8095/alerts
+        send_resolved: true
+
+# A fast burn already pages; don't also raise the slow-burn ticket for it.
+inhibit_rules:
+  - source_matchers: [alertname="ShopSLOFastBurn"]
+    target_matchers: [alertname="ShopSLOSlowBurn"]

@@ -1,0 +1,59 @@
+# Shop SLO: 99% of synthetic user requests are good (succeed within 300 ms).
+# Error budget = the 1% that may be bad.
+#
+# Alerts use the multi-window, multi-burn-rate pattern from the Google SRE
+# Workbook, scaled from hours to lab time: a page needs a long window (a real
+# problem, not a blip) AND a short one (still happening, so it stops paging
+# soon after recovery). Burn rate 14.4 = spending the budget 14.4x too fast.
+# Tested with `promtool test rules` (observability/prometheus/tests).
+groups:
+  - name: shop-slo
+    rules:
+      - record: slo:bad_ratio:rate20s
+        expr: |
+          sum(rate(shop_synthetic_requests_total{result!="good"}[20s]))
+            / sum(rate(shop_synthetic_requests_total[20s]))
+      - record: slo:bad_ratio:rate1m
+        expr: |
+          sum(rate(shop_synthetic_requests_total{result!="good"}[1m]))
+            / sum(rate(shop_synthetic_requests_total[1m]))
+      - record: slo:bad_ratio:rate10m
+        expr: |
+          sum(rate(shop_synthetic_requests_total{result!="good"}[10m]))
+            / sum(rate(shop_synthetic_requests_total[10m]))
+      - record: slo:bad_ratio:rate1h
+        expr: |
+          sum(rate(shop_synthetic_requests_total{result!="good"}[1h]))
+            / sum(rate(shop_synthetic_requests_total[1h]))
+
+      # Page: wakes the on-call agent (Alertmanager webhook).
+      - alert: ShopSLOFastBurn
+        expr: slo:bad_ratio:rate1m > (14.4 * 0.01) and slo:bad_ratio:rate20s > (14.4 * 0.01)
+        labels:
+          severity: page
+        annotations:
+          summary: Shop is burning its error budget 14x too fast
+          description: >-
+            Over 14.4% of synthetic user requests failed or took longer than
+            300 ms, in both the last minute and the last 20 seconds (SLO: 99% good).
+
+      # Ticket: a slower, sustained burn worth a look, not an emergency.
+      - alert: ShopSLOSlowBurn
+        expr: slo:bad_ratio:rate1h > (3 * 0.01) and slo:bad_ratio:rate10m > (3 * 0.01)
+        labels:
+          severity: ticket
+        annotations:
+          summary: Shop has spent its error budget 3x too fast this hour
+          description: >-
+            Over 3% of synthetic user requests were bad in both the last hour and
+            the last 10 minutes (SLO: 99% good).
+
+      # Meta-monitoring: without synthetic traffic the SLO is blind.
+      - alert: SyntheticTrafficDown
+        expr: up{job="traffic"} == 0
+        for: 30s
+        labels:
+          severity: ticket
+        annotations:
+          summary: Synthetic traffic is not being scraped
+          description: The SLO cannot be measured while the traffic service is down.

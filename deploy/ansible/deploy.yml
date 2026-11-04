@@ -1,0 +1,165 @@
+# Provision a fresh Ubuntu server and deploy CHAOS OS behind HTTPS + login.
+# Run from your machine with deploy/deploy.ps1 (or deploy.sh); safe to re-run
+# to update the server to the latest commit on GitHub.
+- name: Deploy CHAOS OS
+  hosts: all
+  become: true
+  vars_files:
+    - ../secrets.yml
+  vars:
+    app_dir: /opt/chaos-os
+    repo_url: https://github.com/Prarthan-B-P/chaos-os.git
+    repo_version: main
+    docker_arch: "{{ 'arm64' if ansible_architecture in ['aarch64', 'arm64'] else 'amd64' }}"
+    # No domain? <server-ip>.sslip.io resolves to the server and gets a real certificate.
+    site_host: "{{ domain if (domain | default('')) else (ansible_host | default(inventory_hostname)) ~ '.sslip.io' }}"
+
+  pre_tasks:
+    - name: Refuse weak or placeholder passwords
+      ansible.builtin.assert:
+        that:
+          - dashboard_password | length >= 12
+          - "'change-me' not in dashboard_password"
+          - grafana_password | length >= 12
+          - "'change-me' not in grafana_password"
+        fail_msg: Set long, real passwords in deploy/secrets.yml (12+ characters).
+        quiet: true
+      no_log: true
+
+  tasks:
+    - name: Install base packages
+      ansible.builtin.apt:
+        name: [ca-certificates, curl, git, iptables]
+        update_cache: true
+
+    - name: Add 2 GB of swap on small servers (image builds need headroom)
+      when: ansible_memtotal_mb < 6000
+      block:
+        - name: Create swap file
+          ansible.builtin.command: fallocate -l 2G /swapfile
+          args: { creates: /swapfile }
+          register: swapfile
+        - name: Enable swap
+          ansible.builtin.shell: chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+          when: swapfile.changed
+        - name: Keep swap after reboot
+          ansible.builtin.lineinfile:
+            path: /etc/fstab
+            line: /swapfile none swap sw 0 0
+
+    # Oracle Cloud's Ubuntu images ship iptables rules that reject everything but
+    # SSH; open HTTP/HTTPS live and in the saved rules (other clouds: harmless).
+    - name: Allow HTTP and HTTPS now
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: "{{ item }}"
+        ctstate: [NEW]
+        jump: ACCEPT
+        action: insert
+      loop: ["80", "443"]
+
+    - name: Check for saved firewall rules
+      ansible.builtin.stat:
+        path: /etc/iptables/rules.v4
+      register: saved_rules
+
+    - name: Allow HTTP and HTTPS after reboot
+      ansible.builtin.lineinfile:
+        path: /etc/iptables/rules.v4
+        line: "-A INPUT -p tcp -m state --state NEW -m tcp --dport {{ item }} -j ACCEPT"
+        insertbefore: '^-A INPUT -j REJECT'
+      loop: ["80", "443"]
+      when: saved_rules.stat.exists
+
+    - name: Add Docker's signing key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+
+    - name: Add Docker's apt repository
+      ansible.builtin.apt_repository:
+        repo: "deb [arch={{ docker_arch }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        filename: docker
+
+    - name: Install Docker Engine and Compose
+      ansible.builtin.apt:
+        name: [docker-ce, docker-ce-cli, containerd.io, docker-buildx-plugin, docker-compose-plugin]
+        update_cache: true
+
+    - name: Start Docker now and at boot
+      ansible.builtin.systemd:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Let the login user run docker
+      ansible.builtin.user:
+        name: "{{ ansible_user | default('ubuntu') }}"
+        groups: docker
+        append: true
+
+    - name: Fetch the code from GitHub
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_dir }}"
+        version: "{{ repo_version }}"
+        force: true
+
+    - name: Hash the dashboard password (bcrypt, via Caddy)
+      ansible.builtin.command: docker run --rm caddy:2.8.4-alpine caddy hash-password --plaintext "{{ dashboard_password }}"
+      register: password_hash
+      changed_when: false
+      no_log: true
+
+    - name: Write secrets to .env (owner-only)
+      ansible.builtin.template:
+        src: templates/env.j2
+        dest: "{{ app_dir }}/.env"
+        mode: "0600"
+      no_log: true
+
+    - name: Copy saved experiment history, if provided (deploy/seed)
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../seed/"
+        dest: "{{ app_dir }}/deploy/seed/"
+        mode: "0644"
+      when: lookup('ansible.builtin.fileglob', playbook_dir ~ '/../seed/*', wantlist=True) | length > 0
+      register: seed
+
+    # Created with Compose's labels so `docker compose up` adopts it as its own.
+    - name: Load the history into the results volume (never overwrites)
+      ansible.builtin.shell: >
+        docker volume create
+        --label com.docker.compose.project=chaosos
+        --label com.docker.compose.volume=results
+        chaosos_results >/dev/null &&
+        docker run --rm -v chaosos_results:/results -v {{ app_dir }}/deploy/seed:/in:ro
+        alpine:3.20 sh -c 'cp -n /in/* /results/ 2>/dev/null || true'
+      when: seed is changed
+
+    - name: Build and start the stack (first run takes several minutes)
+      ansible.builtin.command: docker compose up -d --build --wait --remove-orphans
+      args:
+        chdir: "{{ app_dir }}"
+      changed_when: true
+
+    - name: Wait for HTTPS and the login to work
+      become: false
+      delegate_to: localhost
+      ansible.builtin.uri:
+        url: "https://{{ site_host }}/api/overview"
+        user: "{{ dashboard_user }}"
+        password: "{{ dashboard_password }}"
+        force_basic_auth: true
+        status_code: 200
+      register: live
+      until: live.status == 200
+      retries: 30
+      delay: 10
+      no_log: true
+
+    - name: Done
+      ansible.builtin.debug:
+        msg: "CHAOS OS is live at https://{{ site_host }} (log in as '{{ dashboard_user }}'). Grafana: https://{{ site_host }}/grafana"

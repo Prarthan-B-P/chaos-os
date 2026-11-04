@@ -1,0 +1,30 @@
+# Public entry point. SITE_ADDRESS is a hostname (e.g. 129.1.2.3.sslip.io) for
+# automatic Let's Encrypt HTTPS, or ":80" for a plain-HTTP local test.
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# One login for everything: the dashboard can run experiments and spend the
+	# OpenAI key, so it must never be anonymous on the internet.
+	basic_auth {
+		{$DASHBOARD_USER} {$DASHBOARD_PASSWORD_HASH}
+	}
+
+	handle /grafana* {
+		reverse_proxy grafana:3000
+	}
+
+	handle {
+		# Approvals in the dashboard are signed with the logged-in user.
+		reverse_proxy dashboard:8090 {
+			header_up X-Remote-User {http.auth.user.id}
+		}
+	}
+}

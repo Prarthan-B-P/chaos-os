@@ -1,0 +1,73 @@
+# Production overlay for a server:
+#   docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --build --wait
+# (deploy/ansible/deploy.yml writes COMPOSE_FILE into .env so plain `docker compose` uses both.)
+#
+# Caddy is the ONLY public entry point: HTTPS + login in front of the dashboard
+# and Grafana. Nothing else publishes a port; Jenkins is not deployed here.
+services:
+  caddy:
+    image: caddy:2.8.4-alpine
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS in .env}
+      DASHBOARD_USER: ${DASHBOARD_USER:?set DASHBOARD_USER in .env}
+      DASHBOARD_PASSWORD_HASH: ${DASHBOARD_PASSWORD_HASH:?set DASHBOARD_PASSWORD_HASH in .env}
+    volumes:
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data        # TLS certificates survive restarts
+      - caddy_config:/config
+    depends_on:
+      - dashboard
+      - grafana
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: dashboard/Dockerfile
+    restart: unless-stopped
+    environment:
+      LAB_PROJECT: ${COMPOSE_PROJECT_NAME:-chaosos}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      GRAFANA_URL: http://grafana:3000/grafana
+      GRAFANA_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - results:/results
+    depends_on:
+      api:
+        condition: service_healthy
+
+  controller:
+    environment:
+      GRAFANA_URL: http://grafana:3000/grafana
+      GRAFANA_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+
+  oncall:
+    restart: unless-stopped
+    environment:
+      GRAFANA_URL: http://grafana:3000/grafana
+      GRAFANA_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+
+  grafana:
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_SERVER_ROOT_URL: ${PUBLIC_URL:-http://localhost}/grafana/
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+
+  frontend: { restart: unless-stopped }
+  api: { restart: unless-stopped }
+  postgres: { restart: unless-stopped }
+  redis: { restart: unless-stopped }
+  toxiproxy: { restart: unless-stopped }
+  prometheus: { restart: unless-stopped }
+  traffic: { restart: unless-stopped }
+  alertmanager: { restart: unless-stopped }
+
+volumes:
+  caddy_data:
+  caddy_config:

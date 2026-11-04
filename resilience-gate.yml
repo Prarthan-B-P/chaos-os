@@ -1,0 +1,26 @@
+# Resilience gate - policy as code.
+# Every release must recover from each failure below, using the listed
+# recovery playbook, within max_recovery_s (fault injection -> sustained
+# healthy traffic). Run by Jenkins via `chaosctl gate`; any miss fails the build.
+#
+# Limits are roughly 2x the median measured locally, leaving headroom for a
+# busier CI host.
+checks:
+  - scenario: redis_down
+    action: restart_redis
+    max_recovery_s: 10
+  - scenario: redis_down
+    action: cache_bypass
+    max_recovery_s: 10
+  - scenario: redis_latency
+    action: cache_bypass
+    max_recovery_s: 10
+  - scenario: postgres_latency
+    action: warm_cache
+    max_recovery_s: 15
+  - scenario: postgres_down
+    action: restart_postgres
+    max_recovery_s: 15
+  - scenario: api_crash
+    action: restart_api
+    max_recovery_s: 20

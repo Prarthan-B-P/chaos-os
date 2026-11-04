@@ -6,3 +6,17 @@ lab-logs.txt
 results/
 *.sqlite
 *.db
+
+# Deployment secrets and exported history (never commit)
+deploy/secrets.yml
+deploy/seed/
+
+# Local security scan output (CI archives it instead)
+security-reports/
+
+# Study-guide generator dependencies (npm install in docs/study-guide)
+docs/study-guide/node_modules/
+# LaTeX build by-products
+docs/paper/*.aux
+docs/paper/*.log
+docs/paper/chaos-os-ieee.pdf

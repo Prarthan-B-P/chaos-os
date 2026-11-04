@@ -3,8 +3,8 @@
 # on Windows, Linux, and inside Jenkins - no WSL install needed.
 FROM python:3.12-slim
 
-COPY --from=docker:27.3-cli /usr/local/bin/docker /usr/local/bin/docker
-RUN pip install --no-cache-dir ansible-core==2.17.5
+COPY --from=docker:29.8-cli /usr/local/bin/docker /usr/local/bin/docker
+RUN pip install --no-cache-dir ansible-core==2.21.6
 
 WORKDIR /ansible
 COPY . .
