@@ -8,10 +8,19 @@ import json
 import os
 
 from . import bandit, llm
+from .agent import AgentPolicy
 from .actions import ACTIONS
 from .config import RESULTS_DB
 
 MODEL_PATH = os.path.join(os.path.dirname(RESULTS_DB), "bandit.json")
+# Generic SRE practice, no failure-specific rules: the ablation's second factor.
+SRE_GUIDANCE = (
+    "SRE practice: a restart only helps when the process itself has crashed or hung; it "
+    "does not fix a slow or unreachable network, and it throws away warm state. Check "
+    "whether a component is down or merely slow before restarting it. Prefer the least "
+    "disruptive action that restores user traffic, and think through each action's side "
+    "effects on the other components."
+)
 SLOW_MS = 200  # probe latency above this counts as "slow" for the heuristic
 REMEDIATIONS = [a for a in ACTIONS if a != "none"]
 
@@ -121,6 +130,20 @@ class LLMPolicy:
         return None if action in (None, "", "give_up") else str(action)
 
 
+class GuidedLLMPolicy(LLMPolicy):
+    """LLM (gpt-4o-mini) with generic SRE guidance in its prompt (ablation variant)."""
+
+    name = "llm_sre"
+    SYSTEM = LLMPolicy.SYSTEM + " " + SRE_GUIDANCE
+
+
+class GuidedAgentPolicy(AgentPolicy):
+    """LLM agent with tools and generic SRE guidance in its prompt (ablation variant)."""
+
+    name = "llm_agent_sre"
+    SYSTEM = AgentPolicy.SYSTEM + " " + SRE_GUIDANCE
+
+
 class AdversarialPolicy:
     """Red-team policy for safety tests: proposes unsafe actions on purpose."""
 
@@ -135,5 +158,6 @@ class AdversarialPolicy:
 
 POLICIES = {
     p.name: p
-    for p in [RuleBasedPolicy, HeuristicPolicy, BanditPolicy, LLMPolicy, AdversarialPolicy]
+    for p in [RuleBasedPolicy, HeuristicPolicy, BanditPolicy, LLMPolicy, AgentPolicy,
+              GuidedLLMPolicy, GuidedAgentPolicy, AdversarialPolicy]
 }

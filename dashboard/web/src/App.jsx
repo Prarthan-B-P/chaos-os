@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { LabContext, LINKS, useApi, useLab } from "./api.js";
 import { Icon } from "./components.jsx";
 import Overview from "./pages/Overview.jsx";
+import OnCall from "./pages/OnCall.jsx";
 import Matrix from "./pages/Matrix.jsx";
 import Policies from "./pages/Policies.jsx";
 import Learning from "./pages/Learning.jsx";
@@ -11,6 +12,7 @@ import Safety from "./pages/Safety.jsx";
 
 const PAGES = [
   ["overview", "Overview", Overview],
+  ["oncall", "On-call", OnCall],
   ["matrix", "Matrix", Matrix],
   ["policies", "Policies", Policies],
   ["learning", "Learning", Learning],
@@ -30,14 +32,18 @@ function LiveStrip({ go }) {
   const total = data?.services.length ?? 0;
   const faults = (data?.proxies ?? []).filter((p) => !p.enabled || p.toxics.length).map((p) => p.proxy);
   const fault = faults.length > 0 || up < total;
+  const oncall = data?.oncall;
   return (
     <div className="topline" role="status">
       <div className="container">
         <span className="live"><i className={fault ? "fault" : ""} aria-hidden="true" />
           {data ? `LIVE · chaosos lab ${fault ? "· fault active" : "· healthy"} · ${up}/${total} services up` : "Connecting to the lab…"}
           {faults.length > 0 && ` · ${faults.join(", ")} degraded`}
+          {oncall?.incident && ` · on-call incident #${oncall.incident.id}`}
         </span>
-        <button onClick={() => go("run")}>Run an experiment →</button>
+        {oncall?.approval
+          ? <button className="urgent" onClick={() => go("oncall")}>Approval needed →</button>
+          : <button onClick={() => go(oncall?.incident ? "oncall" : "run")}>{oncall?.incident ? "Watch the agent →" : "Run an experiment →"}</button>}
       </div>
     </div>
   );

@@ -46,6 +46,12 @@ services:
       GRAFANA_URL: http://grafana:3000/grafana
       GRAFANA_PASSWORD: ${GRAFANA_PASSWORD:-admin}
 
+  oncall:
+    restart: unless-stopped
+    environment:
+      GRAFANA_URL: http://grafana:3000/grafana
+      GRAFANA_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+
   grafana:
     restart: unless-stopped
     environment:
@@ -59,6 +65,8 @@ services:
   redis: { restart: unless-stopped }
   toxiproxy: { restart: unless-stopped }
   prometheus: { restart: unless-stopped }
+  traffic: { restart: unless-stopped }
+  alertmanager: { restart: unless-stopped }
 
 volumes:
   caddy_data:

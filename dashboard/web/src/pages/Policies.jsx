@@ -40,7 +40,7 @@ export default function Policies({ go }) {
 
       {rows.length === 0 ? <div className="card empty">No policy runs for this set yet — start one from Run.</div> : (
         <>
-          <div className="grid grid-4">
+          <div className="grid grid-kpis" style={{ "--cols": Math.max(4, totals.length) }}>
             {totals.map((t) => (
               <section className="card" key={t.p}>
                 <div className="kpi-label" style={{ display: "flex", alignItems: "center", gap: 8 }}>

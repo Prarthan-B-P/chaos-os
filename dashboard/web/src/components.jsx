@@ -87,6 +87,28 @@ export function ChartTooltip({ active, payload, label, unit = "", labelFmt }) {
   );
 }
 
+/** An agent's investigation before it acted: each read-only tool call and what it saw. */
+export function Trail({ trail }) {
+  if (!trail?.length) return null;
+  const arg = (t) => {
+    const v = Object.values(t.args || {});
+    return v.length ? v.map((x) => (typeof x === "string" ? x : JSON.stringify(x))).join(", ") : "";
+  };
+  return (
+    <details className="trail">
+      <summary>Investigated with {trail.length} tool call{trail.length === 1 ? "" : "s"}</summary>
+      <ol>
+        {trail.map((t, i) => (
+          <li key={i}>
+            <span className="mono">{t.tool}({arg(t)})</span>
+            <pre>{t.result}</pre>
+          </li>
+        ))}
+      </ol>
+    </details>
+  );
+}
+
 export function Loading({ error }) {
   return <div className={error ? "error" : "empty"}>{error || "Loading…"}</div>;
 }

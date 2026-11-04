@@ -55,8 +55,19 @@ services:
     build: ./chaos/toxiproxy
     command: ["-host=0.0.0.0", "-config=/config/toxiproxy.json"]
 
+  # Synthetic users: steady traffic and the client-side SLI behind the SLO alerts.
+  traffic:
+    build: ./app/traffic
+    depends_on:
+      api:
+        condition: service_healthy
+
   prometheus:
     build: ./observability/prometheus
+
+  # Routes SLO burn-rate pages to the on-call agent.
+  alertmanager:
+    build: ./observability/alertmanager
 
   grafana:
     build: ./observability/grafana
@@ -65,6 +76,28 @@ services:
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
     depends_on:
       - prometheus
+
+  # On-call agent: heals failures nobody announced (paged by Alertmanager).
+  oncall:
+    build:
+      context: .
+      dockerfile: controller/Dockerfile
+    command: ["oncall"]
+    environment:
+      LAB_PROJECT: ${COMPOSE_PROJECT_NAME:-chaosos}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - results:/results
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8095/healthz', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    depends_on:
+      api:
+        condition: service_healthy
 
   # On-demand tools (profile "tools"), not started by `up`:
   #   docker compose run --rm --build controller run --scenario redis_down --action all

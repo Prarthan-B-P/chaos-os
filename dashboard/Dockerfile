@@ -2,13 +2,13 @@
 # Built from the repo root (it bundles the controller and its playbooks).
 FROM node:20.18-alpine AS web
 WORKDIR /web
-COPY dashboard/web/package.json ./
-RUN npm install --no-audit --no-fund
+COPY dashboard/web/package.json dashboard/web/package-lock.json ./
+RUN npm ci --no-audit --no-fund
 COPY dashboard/web ./
 RUN npm run build
 
 FROM python:3.12-slim
-COPY --from=docker:27.3-cli /usr/local/bin/docker /usr/local/bin/docker
+COPY --from=docker:29.8-cli /usr/local/bin/docker /usr/local/bin/docker
 COPY controller/requirements.txt /tmp/controller.txt
 COPY dashboard/requirements.txt /tmp/dashboard.txt
 RUN pip install --no-cache-dir -r /tmp/controller.txt -r /tmp/dashboard.txt

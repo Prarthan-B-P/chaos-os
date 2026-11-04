@@ -1,86 +1,77 @@
 # Demo runbook
 
-A 5-minute live demo of CHAOS OS, plus answers to likely questions.
+A 7-minute live demo of CHAOS OS, plus answers to likely questions. The full
+team guide (with about 50 viva questions) is in
+[docs/study-guide](study-guide/).
 
 ## 10 minutes before
 
 1. Start **Docker Desktop** and wait until it says *Engine running*.
-2. Start the lab and dashboard:
+2. Start the lab and Jenkins:
    ```powershell
    docker compose up -d --wait
    docker compose -f jenkins/docker-compose.yml up -d --wait
    ```
-3. Open four browser tabs:
-   - Dashboard: http://localhost:8090
-   - Grafana: http://localhost:3000/d/chaos-os-service-health (log in admin / admin)
+3. Open five browser tabs:
+   - Dashboard: http://localhost:8090 (On-call page: http://localhost:8090/#/oncall)
+   - Grafana: http://localhost:3000/d/chaos-os-service-health (admin / admin)
+   - Alertmanager: http://localhost:9093
    - Jenkins: http://localhost:8081/job/chaos-os-ci/
    - GitHub: https://github.com/Prarthan-B-P/chaos-os
-4. Warm up: on the dashboard **Run** page, run *redis_latency* with *Bandit (learned)*
-   once, so the live demo is not the first experiment after a cold start.
-5. Check the strip at the top of the dashboard says **healthy · 7/7 services up**.
-   If not, click **Reset lab** on the Overview.
+4. Warm up: on the **On-call** page, **Break it** once with `redis_down` and let
+   the agent heal it, so the live demo is not the first incident after a cold start.
+5. Check the strip at the top of the dashboard says **healthy** and the On-call
+   page says **Autopilot on**. If not, click **Reset lab** on the Overview.
 
-## The 5 minutes
+## The 7 minutes
 
 | Time | Do | Say |
 |---|---|---|
-| 0:00 | Dashboard Overview | "Everything here is measured: experiments, recovery rate, blocked unsafe actions." |
-| 0:45 | **Run** → failure `redis_latency`, responder **Bandit (learned)** → Start | "Redis just got slow. Watch: outage detected, the bandit picks cache bypass, the validator approves, recovered in about 3 seconds." |
-| 2:00 | Click **Incident #…** → **Write post-mortem** | "Every incident is a timeline of what it saw and did. gpt-4o-mini writes the post-mortem from the measured data." |
-| 3:00 | Grafana tab | "The orange markers are the fault injection and the fix, on the live metrics." |
-| 3:45 | Jenkins → `demo/broken-cache-bypass` (red) vs `main` (green) | "A one-character bug passed unit and smoke tests. The resilience gate blocked it." |
-| 4:30 | Overview → **Ask the lab** (Ctrl+K) | Let someone ask, e.g. "Which fix works best for a slow database?" |
+| 0:00 | Dashboard → Overview | "Everything here is measured: experiments, recovery, blocked unsafe actions." |
+| 0:40 | On-call → Failure: *Surprise me* → **Break it** | "I just broke the shop. The agent was not told what or when." |
+| 1:00 | Watch the incident timeline fill in | "Users noticed, the SLO burned 14 times too fast, Alertmanager paged the agent, it confirmed with its own traffic, picked a fix, the safety validator allowed it." |
+| 2:00 | Open the incident → post-mortem | "gpt-4o-mini wrote this from the incident record only." |
+| 2:45 | **Break it** with `postgres_down` → **Approve** on the orange card | "Restarting the database is high impact, so the agent asks me. No answer in 60 seconds means it does nothing." |
+| 3:45 | Incidents → an *LLM agent + tools* trial → open the tool trail | "The agent investigated with real tools (metrics, logs) before deciding; every call is auditable." |
+| 4:30 | Grafana → *SLO and on-call* row | "The burn rate crosses the 14.4 line; the orange markers are our fault and fix." |
+| 5:15 | Jenkins → `main` (green) vs `demo/broken-cache-bypass` (red) | "A one-character bug passed unit and smoke tests. The resilience gate blocked it. Every build also scans for secrets and CVEs and runs an unannounced on-call drill." |
+| 6:15 | Overview → **Ask the lab** (Ctrl+K) | Let someone ask, e.g. "Which fix works best for a slow database?" |
 
 ## If something goes wrong
 
-- **No internet or OpenAI down:** skip Ask the lab and the post-mortem; everything else is local.
-- **A run is stuck or the lab looks broken:** Overview → **Reset lab**, or
-  `docker compose up -d --wait`.
-- **Dashboard shows "another experiment is already running":** wait for it to
-  finish (at most about 2 minutes); only one experiment runs at a time on purpose.
-- **Jenkins not reachable:** show the green and red builds from the deck (slide 12).
+- **No internet or OpenAI down:** skip the post-mortem and Ask the lab; everything else is local.
+- **The lab looks broken:** Overview → **Reset lab**, or `docker compose up -d --wait`.
+- **"The lab is busy":** an experiment or an on-call incident owns the lab; wait (at most about 2 minutes).
+- **No page after Break it:** check http://localhost:9090/targets (traffic must be *up*) and Alertmanager.
+- **Jenkins not reachable:** show the screenshots in the study guide.
 
 ## Likely questions
 
-**Why not just use an existing chaos tool (Chaos Mesh, LitmusChaos, Gremlin)?**
-They inject faults; they don't compare recovery strategies or learn which one
-to use. CHAOS OS measures every fix against every failure, learns from it, and
-gates releases on the result. A Kubernetes port with Chaos Mesh as the fault
-injector is listed as future work.
-
-**Isn't the bandit just memorizing failure names?**
-It never sees the name. Its input is observable symptoms only (error rate,
-p95, API up, Redis/Postgres reachability and probe latency). The held-out
-Redis network cut is the proof: it was never trained on, looks like "Redis
-down", and the bandit still picked the right fix (3/3, 0.8 s).
-
-**Why does the heuristic do as well as the bandit?**
-I wrote the heuristic after studying the training results, so it encodes the
-answers. The bandit reaches the same level without anyone writing rules, which
-is what matters when there are many more failures than a person can study.
+The full list with model answers is in the study guide (chapter 10). The five
+most likely:
 
 **How do you define "recovered"?**
 Five consecutive 1-second windows with at least 99 % successful requests and p95
 latency of 300 ms or less, measured per request by the load generator.
-Prometheus scrapes every 5 s, which is too coarse for second-level recovery.
+
+**Isn't the bandit just memorizing failure names?**
+It never sees the name, only symptoms. The held-out Redis network cut proves it:
+never trained on, it looks like "Redis down", and the bandit still picked the
+right fix (3/3, 0.8 s) while the runbook failed 0/3.
 
 **What stops the AI from doing something dangerous?**
-Every action, from any policy, passes the safety validator first: approved lab
-environments only, an action allowlist, no repeats (no restart loops), at most
-three actions per incident, and approval for high-impact actions. Ansible adds
-a second allowlist. The red-team policy proposed `drop_database` and
-`restart_grafana`; both were blocked. Zero unsafe actions ever executed.
+It only proposes. The safety validator checks every proposal (approved lab,
+allowlist, no repeats, at most three actions, approval for high impact) and the
+Ansible playbooks enforce their own allowlist. Zero unsafe actions ever executed.
 
-**Why did the LLM do worse?**
-It tends to try a restart first, which wastes about 40 s when restarting
-cannot help, and it never fixed the slow database. It is still useful for
-explaining results, where it only summarizes measured data.
+**What did the LLM ablation show?**
+Advice changed the habit, not the reasoning: with one paragraph of generic SRE
+guidance the model chose cache bypass first in all 14 trials, so Redis latency
+fell from 50 s to 3.3 s, but a crashed database was never restarted. Tools alone
+added 8-12 s without changing choices; tools plus advice handled both kinds of
+fault (10/14, the best LLM result). See the README and the paper.
 
-**How many trials? Is that enough?**
-Two per pair for training failures, three for held-out ones, plus the
-fixed-action matrix. Enough to show clear differences (0/2 vs 2/2), not enough
-for confidence intervals; that is listed as a limitation and next step.
-
-**What would you do next?**
-Multi-step policies for compound failures (the 0/12 case), more trials with
-confidence intervals, a Kubernetes port, and online bandit training in CI.
+**How does the on-call agent know something is wrong?**
+It is never told. Synthetic users measure the SLO, Prometheus pages on a
+multi-window burn rate, and the agent confirms with its own probe traffic before
+acting.

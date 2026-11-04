@@ -1,0 +1,92 @@
+# Unit tests for the SLO alerts: promtool test rules /etc/prometheus/tests/slo_test.yml
+# Synthetic traffic is 2 req/s, so every 5 s sample adds 10 requests.
+rule_files:
+  - ../rules/slo.yml
+evaluation_interval: 5s
+
+tests:
+  # A real outage pages within seconds and stops paging soon after recovery.
+  - interval: 5s
+    input_series:
+      # healthy until 2:00, all requests fail 2:05-3:00, healthy again after 3:00
+      - series: 'shop_synthetic_requests_total{result="good"}'
+        values: '0+10x24 240x11 250+10x11'
+      - series: 'shop_synthetic_requests_total{result="error"}'
+        values: '0x25 10+10x10 110x11'
+      - series: 'shop_synthetic_requests_total{result="slow"}'
+        values: '0x48'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: ShopSLOFastBurn
+        exp_alerts: []
+      - eval_time: 2m30s
+        alertname: ShopSLOFastBurn
+        exp_alerts:
+          - exp_labels:
+              severity: page
+            exp_annotations:
+              summary: Shop is burning its error budget 14x too fast
+              description: >-
+                Over 14.4% of synthetic user requests failed or took longer than
+                300 ms, in both the last minute and the last 20 seconds (SLO: 99% good).
+      - eval_time: 4m
+        alertname: ShopSLOFastBurn
+        exp_alerts: []
+
+  # A 5-second blip burns budget but must not page anyone (the long window says no).
+  - interval: 5s
+    input_series:
+      - series: 'shop_synthetic_requests_total{result="good"}'
+        values: '0+10x24 240 250+10x22'
+      - series: 'shop_synthetic_requests_total{result="error"}'
+        values: '0x24 10x23'
+      - series: 'shop_synthetic_requests_total{result="slow"}'
+        values: '0x48'
+    alert_rule_test:
+      - eval_time: 2m10s
+        alertname: ShopSLOFastBurn
+        exp_alerts: []
+      - eval_time: 2m30s
+        alertname: ShopSLOFastBurn
+        exp_alerts: []
+
+  # Slow responses spend the budget exactly like errors do.
+  - interval: 5s
+    input_series:
+      - series: 'shop_synthetic_requests_total{result="good"}'
+        values: '0+10x24 240x23'
+      - series: 'shop_synthetic_requests_total{result="slow"}'
+        values: '0x24 10+10x22'
+      - series: 'shop_synthetic_requests_total{result="error"}'
+        values: '0x47'
+    alert_rule_test:
+      - eval_time: 2m40s
+        alertname: ShopSLOFastBurn
+        exp_alerts:
+          - exp_labels:
+              severity: page
+            exp_annotations:
+              summary: Shop is burning its error budget 14x too fast
+              description: >-
+                Over 14.4% of synthetic user requests failed or took longer than
+                300 ms, in both the last minute and the last 20 seconds (SLO: 99% good).
+
+  # Losing the SLI itself raises a ticket after 30 s.
+  - interval: 5s
+    input_series:
+      - series: 'up{job="traffic", instance="traffic:9100"}'
+        values: '1x5 0x15'
+    alert_rule_test:
+      - eval_time: 45s
+        alertname: SyntheticTrafficDown
+        exp_alerts: []
+      - eval_time: 1m10s
+        alertname: SyntheticTrafficDown
+        exp_alerts:
+          - exp_labels:
+              severity: ticket
+              job: traffic
+              instance: traffic:9100
+            exp_annotations:
+              summary: Synthetic traffic is not being scraped
+              description: The SLO cannot be measured while the traffic service is down.

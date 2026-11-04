@@ -42,19 +42,23 @@ export const POLICY_COLORS = {
   heuristic: "#1baf7a",
   bandit: "#eb6834",
   llm: "#6250d6",
+  llm_agent: "#e87ba4",  // validated as slot 5 after the four above (below 3:1: always labelled)
 };
-export const POLICY_ORDER = ["rule_based", "heuristic", "bandit", "llm"];
+export const POLICY_ORDER = ["rule_based", "heuristic", "bandit", "llm", "llm_agent"];
 
 export const POLICY_LABELS = {
   rule_based: "Rule-based",
   heuristic: "Heuristic",
   bandit: "Bandit (learned)",
   llm: "LLM (gpt-4o-mini)",
+  llm_agent: "LLM agent + tools",
+  llm_sre: "LLM + SRE guidance",
+  llm_agent_sre: "LLM agent + tools + guidance",
   adversarial: "Adversarial",
   fixed: "Fixed action",
 };
 
-export const POLICY_TAGS = { rule_based: "runbook", heuristic: "expert", bandit: "learned", llm: "gen ai" };
+export const POLICY_TAGS = { rule_based: "runbook", heuristic: "expert", bandit: "learned", llm: "gen ai", llm_agent: "agentic" };
 
 // Locally the dashboard is served on :8090 and the other tools on their own ports.
 // Deployed, everything sits behind the Caddy proxy: Grafana under /grafana on the

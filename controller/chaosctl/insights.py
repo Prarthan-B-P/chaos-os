@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 import yaml
 
-from . import learning, llm, store
+from . import incidents, learning, llm, store
 from .actions import ACTIONS
 from .config import SAFETY_POLICY
 from .scenarios import SCENARIOS
@@ -49,6 +49,28 @@ def explain_trial(trial_id: int, refresh: bool = False) -> str:
         + json.dumps(trial, default=str)
     ))
     _remember(key, text)
+    return text
+
+
+def explain_incident(incident_id: int, refresh: bool = False) -> str:
+    """Post-mortem for an on-call incident (stored with the incident)."""
+    record = incidents.incident(incident_id)
+    if record is None:
+        raise ValueError(f"no on-call incident {incident_id}")
+    if record["postmortem"] and not refresh:
+        return record["postmortem"]
+    text = llm.chat(SYSTEM, (
+        "Write a short post-mortem (4-6 sentences) for an incident handled by an "
+        "autonomous on-call agent. The agent was paged by an SLO burn-rate alert and "
+        "was NOT told what failed, so infer the likely cause cautiously from the "
+        "symptoms. Cover: what alerted, what the agent observed, which actions it "
+        "took (and any the safety validator blocked or a human approved or denied), "
+        "whether and how fast it mitigated (mitigation_s is from the page to "
+        "sustained healthy traffic), and one lesson. Timeline 't' values are seconds "
+        "since the page.\n\n" + json.dumps({k: v for k, v in record.items() if k != "postmortem"},
+                                          default=str)
+    ))
+    incidents.update_incident(incident_id, postmortem=text)
     return text
 
 

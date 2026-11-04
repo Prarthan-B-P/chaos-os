@@ -4,6 +4,8 @@ WORKDIR /srv
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app ./app
+RUN useradd --system --uid 10001 api
+USER api
 
 EXPOSE 8000
 HEALTHCHECK --interval=5s --timeout=2s --retries=3 \

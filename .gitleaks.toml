@@ -1,0 +1,14 @@
+# Secret-scanning policy for gitleaks (run by scripts/security-scan.sh in CI).
+# Default rules, plus one for current-format OpenAI keys; known placeholders allowed.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "openai-api-key-any-format"
+description = "OpenAI API key (sk-, sk-proj-, sk-svcacct-, sk-admin-)"
+regex = '''\bsk-(?:proj-|svcacct-|admin-)?[A-Za-z0-9_-]{32,}'''
+keywords = ["sk-"]
+
+[allowlist]
+description = "Documented placeholders and test fixtures, not secrets"
+regexes = ['''change-me''', '''test-key''']

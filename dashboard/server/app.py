@@ -2,21 +2,27 @@
 
 Reads the shared experiment history (results volume) and can launch
 experiments through the same runner the CLI uses (one at a time per lab).
+It is also the operator's console for on-call mode: approvals, the SLO, and
+the chaos side (unannounced faults, the chaos monkey).
 """
+import math
 import os
+import random
 import threading
 import time
+from datetime import datetime, timezone
 
 import httpx
 import yaml
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from chaosctl import insights, lab, learning, llm, store
+from chaosctl import incidents, insights, lab, learning, llm, store
 from chaosctl.actions import ACTIONS
-from chaosctl.config import LAB_PROJECT, SAFETY_POLICY, TOXIPROXY_URL
+from chaosctl.config import (ALERTMANAGER_URL, LAB_PROJECT, PROMETHEUS_URL, SAFETY_POLICY,
+                             TOXIPROXY_URL)
 from chaosctl.policies import MODEL_PATH, POLICIES
 from chaosctl.runner import LabBusy, lab_lock, make_policy, run_one
 from chaosctl.scenarios import SCENARIOS, TRAINING
@@ -65,8 +71,11 @@ def lab_status() -> dict:
                   for name, p in proxies.items()]
     except httpx.HTTPError:
         faults = []
+    active = incidents.active_incident()
     return {"probe": lab.probe(), "services": sorted(services, key=lambda s: s["name"]),
-            "proxies": faults}
+            "proxies": faults,
+            "oncall": {"incident": active and {"id": active["id"], "status": active["status"]},
+                       "approval": incidents.pending_approval() is not None}}
 
 
 @app.get("/api/matrix")
@@ -146,6 +155,7 @@ def reset_lab() -> dict:
     try:
         with lab_lock(wait=False):
             lab.reset()
+            incidents.clear_chaos()
     except LabBusy as exc:
         raise HTTPException(409, str(exc)) from None
     return lab_status()
@@ -216,6 +226,188 @@ def train() -> dict:
     model, n = learning.train()
     _curve_cache["data"] = None
     return {"steps": n, "actions": model.actions}
+
+
+# ------------------------------------------------------------------ on-call
+
+SLO_TARGET = 0.99          # see observability/prometheus/rules/slo.yml
+PAGE_BURN_RATE = 14.4
+FAULT_MAX_S = 300          # injected faults are rolled back after this long
+ON_CALL_POLICIES = ["heuristic", "rule_based", "bandit", "llm", "llm_agent", "llm_agent_sre"]
+
+
+def _prom(query: str) -> float | None:
+    try:
+        result = httpx.get(f"{PROMETHEUS_URL}/api/v1/query", params={"query": query},
+                           timeout=2).json()["data"]["result"]
+        value = float(result[0]["value"][1]) if result else None
+    except (httpx.HTTPError, KeyError, ValueError, IndexError):
+        return None
+    return value if value is not None and math.isfinite(value) else None
+
+
+def _slo() -> dict:
+    """The SLO as Prometheus sees it: bad-request ratios, burn rates, 24 h budget."""
+    budget = 1 - SLO_TARGET
+    bad_20s, bad_1m = _prom("slo:bad_ratio:rate20s"), _prom("slo:bad_ratio:rate1m")
+    bad_24h = _prom('sum(increase(shop_synthetic_requests_total{result!="good"}[24h]))')
+    total_24h = _prom("sum(increase(shop_synthetic_requests_total[24h]))")
+    rate = _prom("sum(rate(shop_synthetic_requests_total[2m]))")
+    # The budget is 1% of the window's requests; while the 24 h window is still
+    # filling, count the requests a full day of steady traffic would bring.
+    expected = max(total_24h or 0, (rate or 0) * 86400)
+    allowed = budget * expected if expected else None
+    return {
+        "target": SLO_TARGET,
+        "page_burn_rate": PAGE_BURN_RATE,
+        "good_1m": None if bad_1m is None else 1 - bad_1m,
+        "burn_20s": None if bad_20s is None else bad_20s / budget,
+        "burn_1m": None if bad_1m is None else bad_1m / budget,
+        "budget_allowed": None if allowed is None else round(allowed),
+        "budget_used": None if bad_24h is None else round(bad_24h),
+        "budget_remaining": None if not allowed or bad_24h is None else 1 - bad_24h / allowed,
+        "traffic_rate": rate,
+    }
+
+
+def _alerts() -> list[dict] | None:
+    try:
+        raw = httpx.get(f"{ALERTMANAGER_URL}/api/v2/alerts",
+                        params={"active": "true", "silenced": "false", "inhibited": "false"},
+                        timeout=2).json()
+    except (httpx.HTTPError, ValueError):
+        return None  # Alertmanager unreachable: say so instead of "no alerts"
+    return [{"name": a["labels"].get("alertname"), "severity": a["labels"].get("severity"),
+             "summary": a.get("annotations", {}).get("summary"), "started_at": a.get("startsAt")}
+            for a in raw]
+
+
+def _age_s(iso: str) -> float:
+    return (datetime.now(timezone.utc) - datetime.fromisoformat(iso)).total_seconds()
+
+
+@app.get("/api/oncall")
+def oncall_status() -> dict:
+    seen = incidents.agent_seen_at()
+    chaos = incidents.active_chaos()
+    available = {"llm": llm.available(), "llm_agent": llm.available(), "llm_agent_sre": llm.available(),
+                 "bandit": os.path.exists(MODEL_PATH)}
+    return {
+        "settings": incidents.settings(),
+        "agent": {"online": bool(seen) and _age_s(seen) < 30, "seen_at": seen},
+        "slo": _slo(),
+        "alerts": _alerts(),
+        "active": incidents.active_incident(),
+        "approval": incidents.pending_approval(),
+        "incidents": incidents.incidents(limit=30),
+        "score": incidents.scorecard(),
+        "chaos": chaos and {**chaos, "rollback_in_s": max(0, round(FAULT_MAX_S - _age_s(chaos["at"])))},
+        "scenarios": [{"name": s.name, "description": s.description, "held_out": s.held_out}
+                      for s in SCENARIOS.values()],
+        "actions": {a.name: a.description for a in ACTIONS.values()},
+        "policies": [{"name": p, "available": available.get(p, True)} for p in ON_CALL_POLICIES],
+    }
+
+
+@app.get("/api/oncall/incidents/{incident_id}")
+def oncall_incident(incident_id: int) -> dict:
+    record = incidents.incident(incident_id)
+    if record is None:
+        raise HTTPException(404, "incident not found")
+    return record
+
+
+@app.get("/api/insights/oncall/{incident_id}")
+def insights_oncall(incident_id: int, refresh: bool = False) -> dict:
+    return _ai(insights.explain_incident, incident_id, refresh)
+
+
+class SettingsRequest(BaseModel):
+    autopilot: bool | None = None
+    policy: str | None = None
+    monkey: bool | None = None
+    monkey_every_min: int | None = None
+
+
+@app.post("/api/oncall/settings")
+def oncall_settings(req: SettingsRequest) -> dict:
+    changes = req.model_dump(exclude_none=True)
+    if "policy" in changes and changes["policy"] not in ON_CALL_POLICIES:
+        raise HTTPException(400, "unknown policy")
+    if "monkey_every_min" in changes and not 2 <= changes["monkey_every_min"] <= 120:
+        raise HTTPException(400, "monkey interval must be 2-120 minutes")
+    return incidents.update_settings(**changes)
+
+
+class DecisionRequest(BaseModel):
+    approve: bool
+
+
+@app.post("/api/oncall/approvals/{approval_id}")
+def decide_approval(approval_id: int, req: DecisionRequest, request: Request) -> dict:
+    # Behind Caddy this is the logged-in user (header set by the proxy, not the browser).
+    who = request.headers.get("x-remote-user") or "operator"
+    try:
+        return incidents.decide(approval_id, req.approve, who)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from None
+
+
+def _inject(name: str, source: str) -> dict:
+    """Break the lab without telling the agent. One fault at a time."""
+    scenario = random.choice(list(SCENARIOS.values())) if name == "random" else SCENARIOS[name]
+    with lab_lock(wait=False):
+        if incidents.active_chaos():  # roll the previous fault back first
+            lab.reset()
+            incidents.clear_chaos()
+        scenario.inject()
+        event_id = incidents.record_chaos(scenario.name, source)
+    return {"id": event_id, "scenario": scenario.name}
+
+
+class BreakRequest(BaseModel):
+    scenario: str = "random"
+
+
+@app.post("/api/oncall/break")
+def break_lab(req: BreakRequest) -> dict:
+    if req.scenario != "random" and req.scenario not in SCENARIOS:
+        raise HTTPException(400, "unknown scenario")
+    try:
+        return _inject(req.scenario, "manual")
+    except LabBusy as exc:
+        raise HTTPException(409, str(exc)) from None
+
+
+def _chaos_loop() -> None:
+    """Chaos monkey (random unannounced faults, when enabled) and fault rollback."""
+    next_at = None
+    while True:
+        time.sleep(10)
+        try:
+            active = incidents.active_chaos()
+            if active and _age_s(active["at"]) > FAULT_MAX_S:
+                with lab_lock(wait=False):
+                    lab.reset()
+                    incidents.clear_chaos()
+            config = incidents.settings()
+            if not config["monkey"]:
+                next_at = None
+                continue
+            if next_at is None:  # jittered, so faults don't arrive on a predictable beat
+                next_at = time.time() + config["monkey_every_min"] * 60 * random.uniform(0.5, 1.5)
+            if time.time() >= next_at and _job.get("state") != "running":
+                _inject("random", "monkey")
+                next_at = None
+        except LabBusy:
+            pass  # an experiment or incident owns the lab: try again next tick
+        except Exception as exc:  # the monkey must never take the dashboard down
+            print(f"[chaos] {exc.__class__.__name__}: {exc}", flush=True)
+
+
+@app.on_event("startup")
+def start_chaos_loop() -> None:
+    threading.Thread(target=_chaos_loop, daemon=True).start()
 
 
 # ------------------------------------------------------------------ frontend

@@ -20,8 +20,8 @@ def make_policy(policy: str | None = None, action: str | None = None):
     return POLICIES[policy]()
 
 
-def validator() -> SafetyValidator:
-    return SafetyValidator.from_file(SAFETY_POLICY, LAB_PROJECT)
+def validator(on_call: bool = False) -> SafetyValidator:
+    return SafetyValidator.from_file(SAFETY_POLICY, LAB_PROJECT, on_call)
 
 
 class LabBusy(RuntimeError):
@@ -30,7 +30,8 @@ class LabBusy(RuntimeError):
 
 @contextlib.contextmanager
 def lab_lock(wait: bool = True):
-    """One experiment at a time per lab, across the CLI and the dashboard.
+    """One actor at a time per lab: an experiment, or the on-call agent handling an
+    incident, across the CLI, the dashboard and the agent.
 
     The lock file lives on the shared results volume, so separate containers see it.
     """
@@ -40,7 +41,7 @@ def lab_lock(wait: bool = True):
         try:
             fcntl.flock(f, fcntl.LOCK_EX | (0 if wait else fcntl.LOCK_NB))
         except BlockingIOError:
-            raise LabBusy("another experiment is already running on this lab") from None
+            raise LabBusy("the lab is busy (an experiment or an on-call incident is running)") from None
         yield
 
 

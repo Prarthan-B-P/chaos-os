@@ -12,9 +12,16 @@ limits:
   max_actions_per_incident: 3
 
 approval:
-  # High-impact actions need approval. "auto" = approved and logged (isolated
-  # lab only); "deny" = always blocked. Override with CHAOS_HIGH_IMPACT_APPROVAL.
+  # High-impact actions need approval:
+  #   auto  = approved and logged (isolated lab experiments only)
+  #   human = an operator approves or denies it in the dashboard (on-call mode)
+  #   deny  = always blocked
+  # Override with CHAOS_HIGH_IMPACT_APPROVAL.
   high_impact: auto
+  # On-call mode handles failures nobody announced, so a human decides.
+  on_call: human
+  # No decision in time = not run (fail safe).
+  timeout_s: 60
 
 actions:
   # impact: none | low | medium | high

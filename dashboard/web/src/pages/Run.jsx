@@ -28,7 +28,7 @@ export default function Run({ go }) {
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   const running = job?.state === "running";
-  const unavailable = (p) => (p === "llm" && !o.llm_available) || (p === "bandit" && !o.model_trained);
+  const unavailable = (p) => (p.startsWith("llm") && !o.llm_available) || (p === "bandit" && !o.model_trained);
   const start = () => {
     setErr(null);
     const reps = Math.min(5, Math.max(1, Number(form.reps) || 1));

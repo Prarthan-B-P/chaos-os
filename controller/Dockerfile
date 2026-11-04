@@ -2,7 +2,7 @@
 # playbooks it executes as recovery actions.
 FROM python:3.12-slim
 
-COPY --from=docker:27.3-cli /usr/local/bin/docker /usr/local/bin/docker
+COPY --from=docker:29.8-cli /usr/local/bin/docker /usr/local/bin/docker
 COPY controller/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 

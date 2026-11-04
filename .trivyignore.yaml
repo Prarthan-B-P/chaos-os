@@ -1,0 +1,43 @@
+# Accepted risks for Trivy (scripts/security-scan.sh). Every entry states why
+# it is acceptable here; revisit them when a base image or the design changes.
+vulnerabilities:
+  - id: CVE-2025-68121
+    paths:
+      - usr/local/bin/gosu
+    statement: >-
+      Go standard-library CVE in gosu, which the official postgres image runs once
+      at start-up to drop root before starting the server. gosu handles no network
+      or untrusted input, so the vulnerable code is not reachable. Re-check when the
+      official image ships a gosu built with a newer Go.
+    expired_at: 2027-03-01
+
+misconfigurations:
+  - id: AVD-DS-0002
+    paths:
+      - controller/Dockerfile
+      - dashboard/Dockerfile
+      - ansible/Dockerfile
+    statement: >-
+      These run the Docker CLI against the host's /var/run/docker.sock to inject
+      faults and restart lab containers, which needs root in the container.
+      Mitigations: no published ports in production (only Caddy, behind a login),
+      every action passes the safety validator, and the playbooks enforce their
+      own service allowlist.
+  - id: AVD-DS-0002
+    paths:
+      - app/db/Dockerfile
+    statement: >-
+      The official postgres entrypoint starts as root only to set data-directory
+      ownership, then drops to the postgres user for the server itself.
+  - id: AVD-DS-0002
+    paths:
+      - deploy/runner/Dockerfile
+    statement: >-
+      One-shot deployment tool that runs on the operator's own machine; it is
+      never deployed or exposed.
+  - id: AVD-DS-0031
+    paths:
+      - deploy/runner/Dockerfile
+    statement: >-
+      False positive: ANSIBLE_HOST_KEY_CHECKING is a boolean setting whose name
+      contains "KEY"; no secret is passed through the environment.

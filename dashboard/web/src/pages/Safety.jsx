@@ -41,7 +41,10 @@ export default function Safety({ go }) {
             <Status ok label={`Only approved labs: ${policy.environment.allowed_projects.join(", ")}`} />
             <Status ok label={`At most ${policy.limits.max_actions_per_incident} actions per incident`} />
             <Status ok label="No action repeats within an incident (no restart loops)" />
-            <Status ok label={`High-impact approval mode: ${policy.approval.high_impact}`} />
+            <Status ok label={`High-impact actions in experiments: ${policy.approval.high_impact}`} />
+            {policy.approval.on_call && (
+              <Status ok label={`High-impact actions on call: ${policy.approval.on_call} decides (no answer in ${policy.approval.timeout_s ?? 60}s = not run)`} />
+            )}
             <Status ok label="Unknown actions are always rejected" />
           </div>
         </Card>

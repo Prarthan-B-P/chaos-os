@@ -8,17 +8,22 @@
   python -m chaosctl report --by policy
   python -m chaosctl explain [--trial ID]                              # AI write-up
   python -m chaosctl gate --config resilience-gate.yml
+  python -m chaosctl oncall                                            # the on-call agent
+  python -m chaosctl drill --scenario redis_down                       # test it, unannounced
 """
 import argparse
 import sys
+import time
 
+import httpx
 import yaml
 
-from . import insights, learning, store
+from . import incidents, insights, lab, learning, oncall, store
 from .actions import ACTIONS
+from .config import ALERTMANAGER_URL
 from .experiment import TrialResult
 from .policies import POLICIES
-from .runner import make_policy, run_one
+from .runner import lab_lock, make_policy, run_one
 from .scenarios import HELD_OUT, SCENARIOS, TRAINING
 
 SCENARIO_GROUPS = {"all": TRAINING, "held_out": HELD_OUT}
@@ -156,6 +161,58 @@ def cmd_gate(args) -> None:
     print("RESILIENCE GATE PASSED")
 
 
+def cmd_oncall(_args) -> None:
+    oncall.serve()
+
+
+def _wait_for_steady_state(timeout_s: float = 180) -> None:
+    """Start from steady state: no page may still be firing from an earlier fault, or
+    Alertmanager would treat the drill's outage as the same alert and page late."""
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        try:
+            alerts = httpx.get(f"{ALERTMANAGER_URL}/api/v2/alerts", params={"active": "true"},
+                               timeout=3).json()
+        except (httpx.HTTPError, ValueError):
+            return  # no Alertmanager to ask: nothing to wait for
+        if not any(a["labels"].get("severity") == "page" for a in alerts):
+            return
+        time.sleep(3)
+
+
+def cmd_drill(args) -> None:
+    """Break the lab without telling the on-call agent; pass if it heals it in time."""
+    scenario = SCENARIOS[args.scenario]
+    _wait_for_steady_state()
+    with lab_lock():
+        lab.reset()
+        since = incidents.now()
+        scenario.inject()
+        incidents.record_chaos(scenario.name, "drill")
+    print(f"DRILL: injected {scenario.name} unannounced; the on-call agent has "
+          f"{args.within:.0f}s to detect and heal it", flush=True)
+
+    deadline = time.monotonic() + args.within
+    found = None
+    while time.monotonic() < deadline:
+        found = incidents.first_incident_since(since)
+        if found and found["status"] in ("resolved", "escalated"):
+            break
+        time.sleep(2)
+    with lab_lock():  # roll the fault back whatever happened
+        lab.reset()
+        incidents.clear_chaos()
+
+    card = next((m for m in incidents.scorecard()["matches"] if m["incident_id"] == (found or {}).get("id")), {})
+    if not found or found["status"] != "resolved":
+        state = found["status"] if found else "no incident opened"
+        sys.exit(f"DRILL FAILED: {scenario.name} was not healed within {args.within:.0f}s ({state})")
+    print(f"  incident #{found['id']}: alert fired after {card.get('detect_s')}s, agent engaged after "
+          f"{card.get('engage_s')}s, service recovered after {card.get('recover_s')}s "
+          f"(ran: {found['actions'] or 'nothing'})")
+    print("ON-CALL DRILL PASSED")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="chaosctl", description="CHAOS OS experiment controller")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -187,6 +244,14 @@ def main() -> None:
     gate = sub.add_parser("gate", help="run the checks in a gate file; exit 1 on any failure")
     gate.add_argument("--config", default="resilience-gate.yml")
     gate.set_defaults(func=cmd_gate)
+
+    sub.add_parser("oncall", help="run the on-call agent (Alertmanager webhook on :8095)") \
+        .set_defaults(func=cmd_oncall)
+
+    drill = sub.add_parser("drill", help="inject a fault unannounced; exit 1 unless on-call heals it")
+    drill.add_argument("--scenario", default="redis_down", choices=list(SCENARIOS))
+    drill.add_argument("--within", type=float, default=120, help="seconds allowed")
+    drill.set_defaults(func=cmd_drill)
 
     args = parser.parse_args()
     args.func(args)

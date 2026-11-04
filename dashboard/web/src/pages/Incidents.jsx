@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { api, fmtS, fmtTime, plain, POLICY_LABELS, useApi } from "../api.js";
-import { Card, Loading, PageHead, Status } from "../components.jsx";
+import { Card, Loading, PageHead, Status, Trail } from "../components.jsx";
 
 const selectedFromHash = () => Number(window.location.hash.split("/")[2]) || null;
 
@@ -68,6 +68,7 @@ function Detail({ id, llm }) {
             </div>
             {s.note && <div className="t-meta" style={{ fontStyle: "italic" }}>“{s.note}”</div>}
             <Symptoms s={s.symptoms} />
+            <Trail trail={s.trail} />
           </div>
         ))}
         <div className={`t-item ${t.recovered ? "healed" : "blocked"}`}>

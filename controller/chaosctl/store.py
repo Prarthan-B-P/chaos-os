@@ -41,6 +41,7 @@ def save(result: TrialResult) -> int:
         for step in result.steps:
             values = asdict(step)
             values["symptoms"] = json.dumps(values["symptoms"])
+            values["trail"] = json.dumps(values["trail"]) if values["trail"] else None
             conn.execute(
                 f"INSERT INTO steps (trial_id, {', '.join(_STEP_COLUMNS)}) "
                 f"VALUES (?, {', '.join('?' for _ in _STEP_COLUMNS)})",
@@ -110,5 +111,6 @@ def trial(trial_id: int) -> dict | None:
         steps = conn.execute("SELECT * FROM steps WHERE trial_id = ? ORDER BY step",
                              (trial_id,)).fetchall()
     out = dict(row)
-    out["steps"] = [{**dict(s), "symptoms": json.loads(s["symptoms"] or "{}")} for s in steps]
+    out["steps"] = [{**dict(s), "symptoms": json.loads(s["symptoms"] or "{}"),
+                     "trail": json.loads(s["trail"] or "[]")} for s in steps]
     return out

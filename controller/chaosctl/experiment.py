@@ -2,7 +2,8 @@
 
 Remediation is a loop, like real incident response: observe symptoms, ask the
 policy for an action, check it with the safety validator, run it, wait up to
-STEP_WINDOW_S for the service to heal, and if it hasn't, observe again.
+STEP_WINDOW_S for the service to heal, and if it hasn't, observe again. The
+same loop (`remediate`) handles unannounced failures in on-call mode.
 """
 import asyncio
 from dataclasses import dataclass, field
@@ -36,6 +37,7 @@ class Step:
     reward: float | None = None
     note: str | None = None             # e.g. the LLM's stated reason
     symptoms: dict = field(default_factory=dict)
+    trail: list = field(default_factory=list)  # an agent's tool calls before deciding
 
 
 @dataclass(frozen=True)
@@ -98,6 +100,59 @@ async def _wait_healed(load: LoadGenerator, criteria: RecoveryCriteria,
         await asyncio.sleep(0.5)
 
 
+async def remediate(load: LoadGenerator, criteria: RecoveryCriteria, policy,
+                    validator: SafetyValidator, t0: float, deadline: float, emit,
+                    approve=None) -> tuple[list[Step], list[str], list[str]]:
+    """Act until a step heals the service, the policy gives up, or time runs out.
+
+    Step start times are reported relative to `t0` (load-clock seconds).
+    `approve(action, symptoms, note) -> Verdict` asks a human about actions the
+    validator says need approval; without it they stay blocked.
+    Returns (steps, executed actions, rejected proposals).
+    """
+    steps: list[Step] = []
+    executed: list[str] = []
+    rejected: list[str] = []
+    while load.now() < deadline and len(rejected) < MAX_REJECTIONS:
+        symptoms = await _observe(load, criteria)
+        proposal = await asyncio.to_thread(policy.choose, symptoms, executed, rejected)
+        if proposal is None:
+            break
+        note = getattr(policy, "last_reason", None)
+        trail = list(getattr(policy, "last_trail", []))
+        verdict = validator.check(proposal, executed)
+        if verdict.needs_approval and approve is not None:
+            emit("approval", {"action": proposal})
+            verdict = await asyncio.to_thread(approve, proposal, symptoms, note)
+        if not verdict.allowed:
+            rejected.append(proposal)
+            steps.append(Step(len(steps) + 1, proposal, False, verdict.reason,
+                              note=note, symptoms=symptoms, trail=trail))
+            emit("blocked", {"action": proposal, "reason": verdict.reason})
+            continue
+
+        emit("action", {"action": proposal, "verdict": verdict.reason})
+        started = load.now()
+        result = await asyncio.to_thread(run_action, ACTIONS[proposal])
+        executed.append(proposal)
+        healed_at = await _wait_healed(load, criteria, started, deadline)
+        time_to_heal = None if healed_at is None else healed_at - started
+        reward = (0.0 if time_to_heal is None
+                  else max(0.0, 1 - time_to_heal / STEP_WINDOW_S))
+        steps.append(Step(
+            len(steps) + 1, proposal, True, verdict.reason,
+            started_s=_r(started - t0), duration_s=_r(result.duration_s),
+            action_ok=result.ok, healed=healed_at is not None,
+            time_to_heal_s=_r(time_to_heal),
+            reward=_r(reward - validator.cost(proposal)),
+            note=note, symptoms=symptoms, trail=trail,
+        ))
+        emit("step_done", {"action": proposal, "healed": healed_at is not None})
+        if healed_at is not None:
+            break
+    return steps, executed, rejected
+
+
 async def run_trial(scenario: Scenario, policy, validator: SafetyValidator,
                     criteria: RecoveryCriteria = RecoveryCriteria(),
                     rate_per_s: float = 20, warmup_s: float = 15,
@@ -145,39 +200,8 @@ async def run_trial(scenario: Scenario, policy, validator: SafetyValidator,
 
         if detected_at is not None:
             emit("detected", {"after_s": round(detected_at - inject_at, 2)})
-            while load.now() < deadline and len(rejected) < MAX_REJECTIONS:
-                symptoms = await _observe(load, criteria)
-                proposal = await asyncio.to_thread(policy.choose, symptoms, executed, rejected)
-                if proposal is None:
-                    break
-                note = getattr(policy, "last_reason", None)
-                verdict = validator.check(proposal, executed)
-                if not verdict.allowed:
-                    rejected.append(proposal)
-                    steps.append(Step(len(steps) + 1, proposal, False, verdict.reason,
-                                      note=note, symptoms=symptoms))
-                    emit("blocked", {"action": proposal, "reason": verdict.reason})
-                    continue
-
-                emit("action", {"action": proposal, "verdict": verdict.reason})
-                started = load.now()
-                result = await asyncio.to_thread(run_action, ACTIONS[proposal])
-                executed.append(proposal)
-                healed_at = await _wait_healed(load, criteria, started, deadline)
-                time_to_heal = None if healed_at is None else healed_at - started
-                reward = (0.0 if time_to_heal is None
-                          else max(0.0, 1 - time_to_heal / STEP_WINDOW_S))
-                steps.append(Step(
-                    len(steps) + 1, proposal, True, verdict.reason,
-                    started_s=_r(started - inject_at), duration_s=_r(result.duration_s),
-                    action_ok=result.ok, healed=healed_at is not None,
-                    time_to_heal_s=_r(time_to_heal),
-                    reward=_r(reward - validator.cost(proposal)),
-                    note=note, symptoms=symptoms,
-                ))
-                emit("step_done", {"action": proposal, "healed": healed_at is not None})
-                if healed_at is not None:
-                    break
+            steps, executed, rejected = await remediate(load, criteria, policy, validator,
+                                                        inject_at, deadline, emit)
 
             # Keep the load running until recovery is confirmed or time runs out.
             while load.now() < deadline:
