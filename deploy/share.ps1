@@ -69,10 +69,11 @@ try {
     if (-not $live) { Write-Warning "The address is not answering yet; give it a minute and refresh." }
 
     Write-Host ""
-    Write-Host "CHAOS OS is shared at $url" -ForegroundColor Green
     Write-Host "  Log in as '$($secrets.dashboard_user)' with the password in deploy\secrets.yml"
-    Write-Host "  Grafana: $url/grafana"
-    Write-Host "  Online while this computer is awake. Stop: .\deploy\share.ps1 -Stop"
+    Write-Host "  (Grafana charts are under /grafana on the same address.)"
+    Write-Host "  Online while this computer is awake. Stop: share.bat stop"
+    Write-Host ""
+    Write-Host "  WEBSITE: $url" -ForegroundColor Green
     Start-Process $url   # open the public link in the browser
 }
 finally {
