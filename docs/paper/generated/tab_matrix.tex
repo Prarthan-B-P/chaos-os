@@ -1,0 +1,11 @@
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Failure & \shortstack{restart\_\\redis} & \shortstack{restart\_\\postgres} & \shortstack{restart\_\\api} & \shortstack{cache\_\\bypass} & \shortstack{warm\_\\cache} \\
+\midrule
+\texttt{redis\_down} & \textbf{2.0} & $\times$ & $\times$ & \textbf{1.8} & $\times$ \\
+\texttt{redis\_latency} & $\times$ & $\times$ & $\times$ & \textbf{1.9} & $\times$ \\
+\texttt{postgres\_latency} & $\times$ & $\times$ & $\times$ & $\times$ & \textbf{9.0} \\
+\texttt{postgres\_down} & $\times$ & \textbf{6.9} & $\times$ & $\times$ & $\times$ \\
+\texttt{api\_crash} & $\times$ & $\times$ & \textbf{14.6} & $\times$ & $\times$ \\
+\bottomrule
+\end{tabular}

@@ -1,0 +1,23 @@
+\section{Discussion}
+\label{sec:discussion}
+\input{sections/discussion-findings.tex}
+
+\textbf{Resilience as a release criterion.} The seeded bug shows why recovery deserves its own gate:
+a remediation path can be syntactically correct, return success at every layer and still do nothing.
+Only a test that injects the fault and measures user-visible recovery catches it. The same reasoning
+applies to alerts: unit tests for burn-rate rules caught boundary behaviour (a 5\,s blip must not page)
+that is otherwise discovered in production. The security stage found real, fixable problems on its
+first run (vulnerable build-time dependencies, containers running as root), which illustrates that
+DevSecOps gates pay off even in small projects.
+
+\textbf{Threats to validity.} \emph{Internal:} all experiments ran on one laptop; absolute times
+include Ansible and probing overhead and would differ on other hardware, but all policies share the
+same conditions. Samples are small (two or three trials per cell), so we report ranges rather than
+confidence intervals. LLM outputs vary between runs even at temperature~0. The synthetic users and
+the on-call agent ran during the ablation but not during the earlier policy comparison, so we compare
+LLM variants only within the ablation batch. \emph{Construct:} recovery thresholds (99\%, 300\,ms,
+five windows) and the bandit's ``best action'' oracle (highest mean logged reward) are design choices;
+other thresholds could change rankings near the boundaries. \emph{External:} the shop has one read
+path, seven fault types and no write traffic; real systems have more failure modes, cascading effects
+and noisier signals. The expert heuristic was written after seeing the training data, which favours
+it on training faults.

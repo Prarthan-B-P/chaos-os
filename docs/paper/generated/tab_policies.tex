@@ -1,0 +1,16 @@
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Failure & Runbook & Heuristic & Bandit & LLM \\
+\midrule
+\texttt{redis\_down} & 2/2, 2.9\,{\scriptsize(1.9--4.0)} & \textbf{2/2, 1.6} & 2/2, 1.6 & 2/2, 4.0 \\
+\texttt{redis\_latency} & $\times$ 0/2 & 3/3, 2.8\,{\scriptsize(2.8--2.9)} & \textbf{2/2, 2.7\,{\scriptsize(2.7--2.8)}} & 2/2, 28.9\,{\scriptsize(5.0--52.9)} \\
+\texttt{postgres\_latency} & $\times$ 0/2 & \textbf{2/2, 9.8\,{\scriptsize(9.7--9.8)}} & 2/2, 32.7\,{\scriptsize(10.1--55.2)} & $\times$ 0/2 \\
+\texttt{postgres\_down} & \textbf{2/2, 7.4\,{\scriptsize(7.3--7.4)}} & 3/3, 8.0\,{\scriptsize(6.5--10.4)} & 2/2, 43.2\,{\scriptsize(8.0--78.5)} & 2/2, 12.0 \\
+\texttt{api\_crash} & 2/2, 16.1\,{\scriptsize(16.0--16.2)} & \textbf{2/2, 16.0\,{\scriptsize(15.9--16.0)}} & 2/2, 16.0 & 2/2, 16.1\,{\scriptsize(16.1--16.2)} \\
+\midrule
+\texttt{redis\_partition} & $\times$ 0/3 & 3/3, 0.9\,{\scriptsize(0.8--1.1)} & \textbf{3/3, 0.8} & 3/3, 43.4\,{\scriptsize(43.4--43.5)} \\
+\texttt{redis\_down\_slow\_db} & $\times$ 0/3 & $\times$ 0/3 & $\times$ 0/3 & $\times$ 0/3 \\
+\midrule
+\textit{recovered} & 6/16 & 15/18 & 13/16 & 11/16 \\
+\bottomrule
+\end{tabular}

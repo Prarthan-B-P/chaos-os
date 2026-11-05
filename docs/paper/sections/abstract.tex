@@ -1,0 +1,21 @@
+\begin{abstract}
+Automated remediation is increasingly delegated to learned policies and large language models
+(LLMs), yet whether a fix actually restores service, how fast, and how safely is rarely measured. We
+present \sys{}, an open-source resilience lab that injects seven real faults into a three-tier web
+service under open-model load, measures recovery per request, and lets remediation policies act only
+through a safety shield (approved environments, an action allowlist, no repeats, an action budget,
+and human approval for high-impact actions). We compare a conventional runbook, expert rules, a
+LinUCB contextual bandit, gpt-4o-mini, and a tool-using gpt-4o-mini agent on training and held-out
+faults, run a $2\times2$ ablation of tools and generic SRE guidance, and add an always-on agent that is
+paged by SLO burn-rate alerts and heals faults it was not told about. No single action fixes every
+fault: a wrong choice costs 447--1{,}128 failed requests per incident instead of 33--252. The bandit
+reaches \lcBandit{} best-action accuracy (runbook \lcRunbook{}, expert rules \lcHeuristic{}) and
+generalises to an unseen network partition (3/3, 0.8\,s) where the runbook fails 0/3. For the LLM,
+generic guidance replaced a restart-first habit with a bypass-first habit (Redis latency
+50.1\,s $\rightarrow$ 3.3\,s) but then never restarted a crashed database; tools alone added 8--12\,s
+without changing decisions, and tools with guidance handled both fault types. The on-call agent
+healed \ocHealed{} of \ocFaults{} unannounced faults, with medians of \ocMedDetect\,s to the alert and
+\ocMedRecover\,s to healthy traffic. No unsafe action ever executed, and a Jenkins pipeline that gates
+releases on resilience, alert-rule, security and on-call checks blocks a one-character bug that
+passes unit and smoke tests.
+\end{abstract}

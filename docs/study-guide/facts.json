@@ -1,0 +1,141 @@
+{
+  "testbed": {
+    "cpu": "Intel Core i5-12450H (8 cores / 12 threads)",
+    "ram": "16 GB",
+    "os": "Windows 11",
+    "docker": "Docker Desktop 29.8.2 on WSL2 (12 vCPUs, 7.6 GB for the Docker VM)",
+    "compose": "Docker Compose 5.5.1"
+  },
+  "loc_total": "about 6,100",
+  "files": 132,
+  "tests": {
+    "unit": 45,
+    "promtool": 4
+  },
+  "security": {
+    "gitleaks": "0 leaks (10 commits + working tree)",
+    "images": "first scan: 3 CRITICAL + 58 HIGH in the frontend base (old Alpine), 1 CRITICAL in the Docker CLI and in gosu (old Go); now 0 fixable CRITICAL",
+    "sbom_components": {
+      "api": 112,
+      "frontend": 71,
+      "traffic": 98,
+      "controller": 109,
+      "postgres": 51
+    },
+    "remaining_high": "Starlette 0.38.6 via FastAPI (3 HIGH, multipart parsing; the API accepts no forms), Docker CLI Go stdlib (4 HIGH), gosu Go stdlib in the official postgres image (25 HIGH; its CRITICAL accepted until 2027-03-01)",
+    "summary": "no secrets in 10 commits; 2 HIGH CVEs in ansible-core and 1 HIGH + 12 MEDIUM in the Vite build tool upgraded; frontend base image 61 HIGH/CRITICAL -> 0 (nginx-unprivileged 1.30 + apk upgrade); Docker CLI 27.3 -> 29.8 (1 CRITICAL fixed); 7 containers made non-root; the scan now passes with documented exceptions (5 containers that must run as root, 1 false positive, 1 CVE accepted until 2027-03-01)"
+  },
+  "ablation_findings": [
+    "**Advice changes the habit, not the reasoning.** Without guidance, both LLM variants restarted Redis first on every Redis fault, which cost 43-59 s on the two faults a restart cannot fix (redis_latency, redis_partition). With the SRE paragraph and no tools, the model chose cache bypass first in **all 14** of its trials: the fastest LLM result where bypass is right (redis_latency 50.1 s -> 3.3 s, partition 43.0 s -> 2.3 s), but harmful where a restart is right: it never restarted the crashed database (0/2, against 2/2 in 7.6 s without advice) and was 3x slower on the crashed API (44.1 s against 13.2 s).",
+    "**Tools alone only cost time.** The agent made 3.6 tool calls per decision on average (1 to 5, over 45 decisions). Without guidance it picked the same first action as the plain LLM on every fault except the slow database (where neither helped), so the investigation added 8-12 s per incident (e.g. redis_down 4.1 s -> 15.6 s) without improving any outcome.",
+    "**Tools + guidance is the most robust.** It recovered every fault that any LLM variant recovered (10/14): cache bypass for Redis faults (8.0-8.1 s), and a restart for the crashed database and API (18.9 s, 22.1 s). On postgres_down it checked readiness, metrics and logs, wrote the hypothesis \"PostgreSQL is down\", and restarted it. The guided LLM without tools saw the same \"Postgres unreachable\" symptom but bypassed the cache, so the investigation step made the difference (more evidence, an explicit hypothesis, or both; two trials cannot separate them). One of its two partition trials still restarted first (6.5 s and 49.5 s): LLMs vary even at temperature 0.",
+    "**What no LLM found:** none used warm_cache for the slow database (0/8) or the two-step fix for the compound failure (0/8). The bandit and the expert heuristic fix the slow database reliably because they learned from measured outcomes. Lesson to say in the viva: LLMs were best as explainers and as cautious first responders behind the safety shield, not as optimisers of recovery time, and prompt text must be tested like code."
+  ],
+  "ci": {
+    "build": 6,
+    "result": "SUCCESS",
+    "duration_s": 346,
+    "duration": "5 min 46 s",
+    "stages": [
+      {
+        "name": "Build images",
+        "seconds": 36,
+        "duration": "36 s"
+      },
+      {
+        "name": "Unit tests",
+        "seconds": 3,
+        "duration": "3 s"
+      },
+      {
+        "name": "Alert rules",
+        "seconds": 3,
+        "duration": "3 s"
+      },
+      {
+        "name": "Security scan",
+        "seconds": 43,
+        "duration": "43 s"
+      },
+      {
+        "name": "Deploy lab",
+        "seconds": 21,
+        "duration": "21 s"
+      },
+      {
+        "name": "Smoke test",
+        "seconds": 1,
+        "duration": "1 s"
+      },
+      {
+        "name": "Resilience gate",
+        "seconds": 178,
+        "duration": "178 s"
+      },
+      {
+        "name": "On-call drill",
+        "seconds": 52,
+        "duration": "52 s"
+      }
+    ],
+    "gate": [
+      "PASS: redis_down -> restart_redis must recover within 10s (got 3.0s)",
+      "PASS: redis_down -> cache_bypass must recover within 10s (got 2.0s)",
+      "PASS: redis_latency -> cache_bypass must recover within 10s (got 2.1s)",
+      "PASS: postgres_latency -> warm_cache must recover within 15s (got 7.6s)",
+      "PASS: postgres_down -> restart_postgres must recover within 15s (got 6.9s)",
+      "PASS: api_crash -> restart_api must recover within 20s (got 12.2s)"
+    ],
+    "drill": "alert after 8.9 s, agent engaged after 13.9 s, healthy after 19.6 s (cache_bypass)",
+    "demo": {
+      "build": 2,
+      "result": "FAILURE",
+      "duration_s": 409,
+      "stages": [
+        {
+          "name": "Build images",
+          "seconds": 36
+        },
+        {
+          "name": "Unit tests",
+          "seconds": 3
+        },
+        {
+          "name": "Alert rules",
+          "seconds": 3
+        },
+        {
+          "name": "Security scan",
+          "seconds": 42
+        },
+        {
+          "name": "Deploy lab",
+          "seconds": 20
+        },
+        {
+          "name": "Smoke test",
+          "seconds": 1
+        },
+        {
+          "name": "Resilience gate",
+          "seconds": 290,
+          "failed": true
+        }
+      ],
+      "gate": [
+        "PASS: redis_down -> restart_redis must recover within 10s (got 3.0s)",
+        "FAIL: redis_down -> cache_bypass must recover within 10s (got no recovery)",
+        "FAIL: redis_latency -> cache_bypass must recover within 10s (got no recovery)",
+        "PASS: postgres_latency -> warm_cache must recover within 15s (got 7.6s)",
+        "PASS: postgres_down -> restart_postgres must recover within 15s (got 7.2s)",
+        "PASS: api_crash -> restart_api must recover within 20s (got 11.7s)"
+      ]
+    },
+    "summary": "main #6 passed every stage in 5 min 46 s (gate recoveries 2.0-12.2 s against 10-20 s deadlines; the unannounced drill was healed 19.6 s after the fault); the demo branch failed exactly the two cache-bypass gate checks"
+  },
+  "campaign_findings": [
+    "**Detection is steady, recovery depends on the fix.** The alert fired 10-15 s after every kind of fault (it depends on the burn-rate windows, not on the fault) and the agent engaged about 5 s later. Redis faults healed by cache bypass were healthy after about 21-22 s; crashed services that needed a restart after 35-36 s (including the 5 s human approval for restart_postgres).",
+    "**The slow database was hardest (median 81.9 s):** connection-pool timeouts made it look unreachable, so the agent sometimes asked to restart Postgres first and only then warmed the cache: the same symptom ambiguity the bandit showed in experiments.",
+    "**Escalation worked as designed:** all 3 compound faults were escalated after the 3-action budget, with no retry loops, and each escalation closed by itself once the lab was healthy again. 8 high-impact actions ran, every one after an approval."
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "chaos-os-study-guide",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Builds the CHAOS OS team study guide (.docx) from chapters/*.js and the measured results",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "dependencies": {
+    "docx": "9.5.1"
+  }
+}

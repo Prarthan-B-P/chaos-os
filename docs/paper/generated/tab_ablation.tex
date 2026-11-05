@@ -1,0 +1,18 @@
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+ & \multicolumn{2}{c}{No tools} & \multicolumn{2}{c}{Tools (agent)} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Failure & no guid. & guidance & no guid. & guidance \\
+\midrule
+\texttt{redis\_down} & 2/2, 4.1\,{\scriptsize(4.0--4.2)} & \textbf{2/2, 3.1\,{\scriptsize(3.0--3.2)}} & 2/2, 15.6\,{\scriptsize(11.4--19.8)} & 2/2, 8.1\,{\scriptsize(6.9--9.2)} \\
+\texttt{redis\_latency} & 2/2, 50.1\,{\scriptsize(50.0--50.2)} & \textbf{2/2, 3.3\,{\scriptsize(3.1--3.5)}} & 2/2, 58.6\,{\scriptsize(58.5--58.7)} & 2/2, 8.0\,{\scriptsize(7.7--8.3)} \\
+\texttt{postgres\_latency} & $\times$ 0/2 & $\times$ 0/2 & $\times$ 0/2 & $\times$ 0/2 \\
+\texttt{postgres\_down} & \textbf{2/2, 7.6\,{\scriptsize(7.2--8.0)}} & $\times$ 0/2 & 2/2, 17.1\,{\scriptsize(12.5--21.6)} & 2/2, 18.9\,{\scriptsize(15.4--22.4)} \\
+\texttt{api\_crash} & \textbf{2/2, 13.2\,{\scriptsize(12.8--13.5)}} & 2/2, 44.1\,{\scriptsize(42.6--45.5)} & 2/2, 23.5\,{\scriptsize(23.2--23.7)} & 2/2, 22.1\,{\scriptsize(21.0--23.3)} \\
+\midrule
+\texttt{redis\_partition} & 2/2, 43.0\,{\scriptsize(42.5--43.5)} & \textbf{2/2, 2.3} & 2/2, 51.1\,{\scriptsize(50.9--51.3)} & 2/2, 28.0\,{\scriptsize(6.5--49.5)} \\
+\texttt{redis\_down\_slow\_db} & $\times$ 0/2 & $\times$ 0/2 & $\times$ 0/2 & $\times$ 0/2 \\
+\midrule
+\textit{recovered} & 10/14 & 8/14 & 10/14 & 10/14 \\
+\bottomrule
+\end{tabular}

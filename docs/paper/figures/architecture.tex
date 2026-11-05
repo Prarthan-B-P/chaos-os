@@ -1,0 +1,87 @@
+% CHAOS OS architecture. Compile: tectonic -X compile architecture.tex
+\documentclass[tikz,border=4pt]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage{tgheros}
+\renewcommand*\familydefault{\sfdefault}
+\usetikzlibrary{arrows.meta,fit,backgrounds}
+\definecolor{ink}{HTML}{0E0E0F}
+\definecolor{muted}{HTML}{6B6965}
+\definecolor{accent}{HTML}{C84A18}
+\definecolor{soft}{HTML}{FDF0EA}
+\definecolor{band}{HTML}{F3F1ED}
+\definecolor{ai}{HTML}{6250D6}
+\definecolor{aisoft}{HTML}{EFEDFB}
+\begin{document}
+\hyphenpenalty=10000\exhyphenpenalty=10000
+\begin{tikzpicture}[
+  font=\footnotesize,
+  box/.style={draw=ink, line width=0.6pt, fill=white, align=center, minimum height=9mm,
+              minimum width=21mm, inner sep=2pt},
+  hot/.style={box, draw=accent, fill=soft},
+  aibox/.style={box, draw=ai, fill=aisoft},
+  arr/.style={-{Stealth[length=1.8mm]}, line width=0.6pt, draw=ink},
+  ctl/.style={arr, draw=accent},
+  obs/.style={arr, draw=muted, dashed},
+  lbl/.style={font=\scriptsize, text=muted, align=center, inner sep=1.5pt},
+  bandname/.style={font=\scriptsize\bfseries, text=muted, anchor=south west, inner sep=1pt},
+]
+% ---------------- band 1: system under test  (columns 3.9 cm apart)
+\node[box] (users) at (0,0) {Synthetic users\\\scriptsize 2 req/s, client-side SLI};
+\node[box] (load) at (0,-1.4) {Experiment load\\\scriptsize 20 req/s, every request timed};
+\node[box] (fe) at (3.9,0) {Frontend\\\scriptsize nginx, non-root};
+\node[box] (api) at (7.8,-0.7) {API\\\scriptsize FastAPI, /ready, /metrics};
+\node[hot] (tox) at (11.7,-0.7) {Toxiproxy\\\scriptsize latency, partitions};
+\node[box] (redis) at (15.6,0) {Redis\\\scriptsize cache, 60 s TTL};
+\node[box] (pg) at (15.6,-1.4) {PostgreSQL\\\scriptsize source of truth};
+\draw[arr] (users) -- (fe);
+\draw[arr] (fe) -- (api);
+\draw[arr] (load.east) -- (api);
+\draw[arr] (api) -- (tox);
+\draw[arr] (tox) -- (redis);
+\draw[arr] (tox) -- (pg);
+
+% ---------------- band 2: observability and response
+\node[box] (graf) at (0,-3.4) {Grafana\\\scriptsize dashboards, annotations};
+\node[box] (prom) at (3.9,-3.4) {Prometheus\\\scriptsize SLI, SLO burn-rate rules};
+\node[box] (am) at (7.8,-3.4) {Alertmanager\\\scriptsize page / ticket routing};
+\node[hot] (agent) at (11.7,-3.4) {On-call agent\\\scriptsize confirms with own probe};
+\node[box] (pol) at (15.6,-3.4) {Policies\\\scriptsize rules, bandit, LLM, agent};
+\draw[obs] (api.south) -- ++(0,-0.75) -| node[lbl, pos=0.25, above] {scrape} (prom.north);
+\draw[obs] (prom) -- (graf);
+\draw[arr] (prom) -- node[lbl, above] {page} (am);
+\draw[arr] (am) -- node[lbl, above] {webhook} (agent);
+\draw[arr] (agent) -- (pol);
+
+% ---------------- band 3: control and evidence
+\node[box] (op) at (0,-5.7) {Operator\\\scriptsize approves high impact};
+\node[box] (dash) at (3.9,-5.7) {Evidence dashboard\\\scriptsize React + FastAPI};
+\node[box] (db) at (7.8,-5.7) {SQLite results\\\scriptsize trials, steps, incidents};
+\node[box] (ctl) at (11.7,-5.7) {Experiment controller\\\scriptsize chaosctl};
+\node[hot] (safe) at (15.6,-5.7) {Safety validator\\\scriptsize allowlist, budget, approval};
+\node[aibox] (llm) at (11.7,-7.7) {OpenAI gpt-4o-mini\\\scriptsize decide, investigate, explain};
+\node[box] (ans) at (15.6,-7.7) {Ansible playbooks\\\scriptsize restart, bypass, warm cache};
+
+\draw[arr] (op) -- (dash);
+\draw[arr, {Stealth[length=1.8mm]}-{Stealth[length=1.8mm]}] (dash) -- (db);
+\draw[arr] (ctl) -- (db);
+\draw[arr] (agent.south west) -- node[lbl, sloped, above, pos=0.45] {incidents} (db.north east);
+\draw[arr] (ctl.north east) -- node[lbl, sloped, below, pos=0.5] {proposal} (pol.south west);
+\draw[arr] (pol) -- node[lbl, right] {proposal} (safe);
+\draw[ctl] (safe) -- node[lbl, right] {allowed} (ans);
+\draw[ctl] (ans.east) -- ++(0.7,0) |- node[lbl, pos=0.27, right] {fix} (redis.east);
+\draw[ctl] (ctl.north west) ++(0.3,0) -- ++(0,0.62) -- (9.9,-4.63) -- (9.9,-2.25) -- (11.4,-2.25)
+  -- node[lbl, pos=0.45, left] {inject} (11.4,-1.15);
+\draw[arr, draw=ai] (llm.north east) -- node[lbl, sloped, above, pos=0.22] {LLM policies} (14.9,-3.85);
+\draw[arr, draw=ai] (db.south east) -- node[lbl, sloped, below] {post-mortems} (llm.west);
+
+% ---------------- bands
+\begin{scope}[on background layer]
+  \node[fill=band, inner sep=7pt, fit=(users)(load)(fe)(api)(tox)(redis)(pg)] (b1) {};
+  \node[fill=band, inner sep=7pt, fit=(graf)(prom)(am)(agent)(pol)] (b2) {};
+  \node[fill=band, inner sep=7pt, fit=(op)(dash)(db)(ctl)(safe)(llm)(ans)] (b3) {};
+\end{scope}
+\node[bandname] at (b1.north west) {SYSTEM UNDER TEST};
+\node[bandname] at (b2.north west) {OBSERVABILITY AND RESPONSE};
+\node[bandname] at (b3.north west) {CONTROL, SAFETY AND EVIDENCE};
+\end{tikzpicture}
+\end{document}

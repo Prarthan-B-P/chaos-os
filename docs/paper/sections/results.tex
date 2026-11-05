@@ -1,0 +1,106 @@
+\section{Results}
+\label{sec:results}
+Unless stated otherwise, cells report recovered/trials, the median recovery time in seconds and its
+range; at 20 requests/s a 60\,s outage is about 1{,}200 failed requests. The database holds
+\nTrials{} experiment trials.
+
+\subsection{No single fix works everywhere}
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_matrix.pdf}
+\caption{Fixed-action matrix (two trials each): median recovery and mean failed requests per incident.
+Hatched cells never recovered within the timeout.}
+\label{fig:matrix}
+\end{figure}
+
+Fig.~\ref{fig:matrix} shows that every training fault has exactly one quickly recovering action, and
+that it differs per fault. Restarting Redis cannot fix \act{redis\_latency} because Redis itself is
+healthy; only \act{cache\_bypass} removes the slow path. \act{cache\_bypass} makes
+\act{postgres\_latency} worse by sending every read to the slow database, whereas one bulk
+\act{warm\_cache} query takes the database off the request path. Choosing a wrong action is not a
+small penalty: the outage continues until the 60\,s timeout, costing 447--1{,}128 failed requests per
+incident instead of 33--252.
+
+\subsection{Policies on training and held-out faults}
+\begin{table*}[t]
+\caption{Policy comparison: recovered/trials, median recovery in seconds (range). Bold: fastest full
+recovery per fault. Below the rule: held-out faults, run after the policies were frozen.}
+\label{tab:policies}
+\centering
+\small
+\input{generated/tab_policies.tex}
+\end{table*}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_policies.pdf}
+\caption{Median recovery (range) per policy on a log scale; $\times$ marks failures to recover.
+Held-out faults are below the dashed line.}
+\label{fig:policies}
+\end{figure}
+
+Table~\ref{tab:policies} and Fig.~\ref{fig:policies} compare the four main policies. The runbook
+recovers only where restarting the broken-looking component is the right answer and fails on both
+latency faults and on the partition. The expert heuristic, written after studying the training
+results, recovers every training fault. The bandit, with no hand-written rules, matches the
+heuristic's recovery rate; its two slow outliers (\act{postgres\_latency}, \act{postgres\_down}) come
+from a first step chosen while connection-pool timeouts made a slow database look dead, after which
+a second action healed the service. On the held-out partition, which looks exactly like a dead Redis
+but cannot be fixed by a restart, the bandit generalises (3/3, 0.8\,s) while the runbook fails 0/3;
+the LLM recovers but only after a restart attempt (43\,s). No policy recovers from the compound
+fault, which requires two coordinated steps (restart Redis, then warm the cache, without bypass).
+
+\subsection{The bandit learns from experience}
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_learning.pdf}
+\caption{Best-action accuracy of the bandit as a function of logged steps seen (mean over 30 random
+replay orders), against the fixed rules evaluated on the same contexts.}
+\label{fig:learning}
+\end{figure}
+
+Replayed over all \lcSteps{} logged training steps, the bandit's best-action accuracy rises from 0
+to \lcBandit{} (Fig.~\ref{fig:learning}), compared with \lcRunbook{} for the runbook and
+\lcHeuristic{} for the expert heuristic on the same contexts. The pool contains every logged step
+from the fixed-action matrix, the policy comparison and the LLM ablation, including unsuccessful
+ones; an earlier snapshot with only the 52 fixed-action steps reached 98\%, against 40\% for the
+runbook. The bandit thus reaches expert-level choices from logged outcomes alone.
+
+\input{sections/results-ablation.tex}
+
+\subsection{Safety}
+Across all studies, zero unsafe actions executed. In red-team runs the adversarial policy proposed
+\act{drop\_database} (blocked: not an approved action), \act{restart\_grafana} (blocked: not
+allowlisted) and repeated restarts (blocked: no repeats within an incident); only allowlisted
+actions ran. The shield also constrained LLM behaviour: in the ablation, the tool-using agent twice
+re-proposed \act{restart\_postgres} after it had already run on \act{postgres\_latency}, and both
+proposals were blocked as repeats. In on-call mode, high-impact actions ran only after a recorded
+human approval.
+
+\input{sections/results-oncall.tex}
+
+\subsection{CI/CD gates and DevSecOps}
+\begin{table}[t]
+\caption{First security scan and remediation}
+\label{tab:security}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}p{1.55cm}p{3.05cm}p{3.0cm}@{}}
+\toprule
+Check & Finding & Action \\
+\midrule
+Secrets (code + history) & none in any commit & custom rule for current OpenAI key formats \\
+Python deps & ansible-core 2.17.5: 2 HIGH CVEs & upgraded to 2.21.6 \\
+npm deps (incl.\ build) & Vite 5.4.10: 1 HIGH, 12 MED., 3 LOW; esbuild: 1 MED.; no lockfile & Vite 6.4.5; lockfile + \texttt{npm ci} \\
+Dockerfiles & 12 images run as root (HIGH); 1 CRITICAL false positive & 7 made non-root; 5 justified, documented \\
+Images & frontend base: 3 CRIT., 58 HIGH (old Alpine); Docker CLI, gosu: 1 CRIT.\ each (old Go) & nginx 1.30 + OS upgrade (0 left); CLI 29.8; gosu accepted, expires; SBOMs (441 comp.) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A branch whose cache-bypass endpoint writes the wrong flag key (a one-character bug) returns HTTP~200
+and reports success from its playbook. The security stage found no secrets but several fixable
+issues (Table~\ref{tab:security}); after upgrades, non-root images, newer base images and documented
+exceptions, the scan passes and now acts as a regression gate.
+\input{sections/results-ci.tex}

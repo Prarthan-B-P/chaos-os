@@ -1,0 +1,31 @@
+\textbf{Measure before you automate.} The fixed-action matrix contradicts the default runbook: restarting
+the component that looks broken is the right answer for only two of five training faults, and a
+wrong action does not degrade gracefully, it prolongs the outage to the timeout. Any remediation
+automation, human-written or learned, should be validated against measured outcomes.
+
+\textbf{Learned policies generalise through symptoms.} Because the bandit sees symptoms rather than
+fault names, it transfers to a fault it never saw when that fault presents like a known one but
+needs a different fix than its look-alike's runbook (the partition). It does not compose actions:
+the compound fault needs a two-step plan that a one-step learner cannot represent. The learner also
+inherits ambiguity from its inputs: pool timeouts make a slow database look dead, which produced its
+slow outliers.
+
+\textbf{LLMs: priors, advice and evidence.} Without guidance, gpt-4o-mini behaves like the runbook: it
+restarts first. One paragraph of generic SRE advice did not make the model reason case by case; it
+replaced one prior with another (bypass first, in every trial). That helped exactly where restarts are
+wrong and hurt where they are right, because a crashed service that times out looks like an unreachable
+one in a symptom summary. An explicit investigation step (tools that query readiness, metrics and logs,
+and a required hypothesis before deciding) let the advised agent tell the cases apart, making tools plus
+advice the most robust LLM configuration, at a cost of seconds per decision. Tools without advice only
+added time. No LLM configuration discovered that warming the cache fixes a slow database, a fix the
+bandit and the expert both learned from measured outcomes. In this setting, LLMs contributed most as
+explainers (post-mortems, questions answered from measured data) and as cautious first responders
+behind a shield, and least as optimisers of recovery time; prompt content should be evaluated as
+carefully as code, because a single generic paragraph moved recovery times by an order of magnitude in
+both directions.
+
+\textbf{Safety is layered.} The shield blocked every unsafe proposal, including repeats proposed by an
+LLM agent, and the independent playbook allowlist would have stopped them again. In on-call mode the
+human-approval path is fail-safe: silence means no action. The agent's ``confirm before acting'' and
+``escalate instead of retrying'' rules prevented two classic automation failures: acting on stale
+alerts and restart loops.

@@ -1,0 +1,16 @@
+\section{Conclusion and Future Work}
+\sys{} shows that resilience can be treated like any other software property: specified (SLOs,
+recovery deadlines, a safety policy), measured at request granularity, learned from, and enforced in
+the release pipeline. Measuring every action against every fault overturned the default runbook; a
+contextual bandit learned expert-level choices from logged outcomes and generalised to an unseen
+fault through its symptoms; and a $2\times2$ ablation showed that, for gpt-4o-mini, generic advice
+steers behaviour strongly in both directions, while tools contribute the evidence that makes the
+advice safe to follow, at the price of decision time. An SLO-driven on-call agent closed the loop on
+faults nobody announced, with a fail-safe human approval path, and a Jenkins pipeline made
+resilience, alerting, security and on-call behaviour into release gates.
+
+Future work follows from the limitations: sequence-aware policies (planning or reinforcement
+learning behind the same shield) for compound faults; a Kubernetes port with Chaos Mesh and
+SLO-gated canary releases; more trials with confidence intervals; safe online exploration in CI; and
+distributed tracing as additional evidence for LLM agents. The lab, the measurement scripts and the
+generators for every figure and table in this paper are open source.

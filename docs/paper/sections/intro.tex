@@ -1,0 +1,45 @@
+\section{Introduction}
+Every production system fails: caches crash, databases slow down, networks drop packets and
+processes die. Operations teams respond with runbooks, typically of the form ``if $X$ is broken,
+restart $Y$'', and increasingly with automation and AI assistants that act on those runbooks.
+Three gaps make this fragile. First, runbooks are rarely \emph{measured}: whether ``restart it''
+actually restores service, and how fast, is assumed rather than known. Second, automation can
+amplify incidents: restart loops and actions on the wrong component are classic causes of
+outages, so autonomous remediation needs guardrails. Third, release pipelines test functional
+correctness on a healthy system; they rarely test that the system still \emph{recovers} when a
+dependency fails.
+
+Chaos engineering~\cite{basiri2016chaos,principlesofchaos} addresses part of the problem by
+injecting faults on purpose, and Site Reliability Engineering (SRE) supplies the vocabulary to
+judge the outcome: service level indicators (SLIs), objectives (SLOs), error budgets and burn-rate
+alerts~\cite{beyer2016sre,beyer2018workbook}. Research on AIOps applies learning to failure
+management~\cite{dang2019aiops,notaro2021survey}, and recent work uses large language models
+(LLMs) to recommend root causes and mitigations for cloud
+incidents~\cite{ahmed2023recommending,chen2024rcacopilot,roy2024agents}. What is missing is a
+place where these ideas meet \emph{under measurement}: where competing remediation strategies,
+including learned and LLM-based ones, act on real faults behind an explicit safety layer, where
+every recovery is timed per request, and where the evidence gates software releases.
+
+This paper presents \sys{}, an open-source resilience lab built from standard DevOps components
+(Docker Compose, Ansible, Jenkins, Prometheus, Alertmanager, Grafana) around a three-tier web
+service. It makes six contributions:
+\begin{enumerate}
+\item A \textbf{measurement harness} that injects seven real faults under open-model load and
+  defines recovery precisely at request granularity (Section~\ref{sec:measure}).
+\item A \textbf{safety shield} that checks every proposed action, from any policy, against a
+  declarative policy (environment, allowlist, no repeats, action budget, approval), backed by a
+  second allowlist in the Ansible playbooks, plus human approval in on-call mode
+  (Section~\ref{sec:safety}).
+\item A \textbf{comparison of five remediation policies} (a conventional runbook, expert rules, a
+  LinUCB contextual bandit~\cite{li2010linucb}, gpt-4o-mini, and a tool-using gpt-4o-mini agent)
+  on training and held-out faults, with a learning curve for the bandit (Sections~\ref{sec:policies}
+  and~\ref{sec:results}).
+\item A \textbf{2$\times$2 ablation} that separates the effect of giving an LLM investigation tools
+  from the effect of generic SRE guidance in its prompt.
+\item An \textbf{SLO-driven on-call agent} that is paged by multi-window burn-rate alerts,
+  confirms the page with its own probe traffic, remediates through the shield, escalates instead of
+  looping, and writes AI post-mortems, evaluated on unannounced faults (Section~\ref{sec:oncall}).
+\item A \textbf{CI/CD pipeline} in which resilience, alert-rule, security and on-call checks are
+  release gates; a one-character bug that passes unit and smoke tests is blocked by the resilience
+  gate (Section~\ref{sec:cicd}).
+\end{enumerate}

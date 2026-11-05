@@ -1,0 +1,14 @@
+\begin{tabular}{@{}lccccp{2.55cm}@{}}
+\toprule
+Failure & Healed & Alert & Engage & Healthy & Actions \\
+\midrule
+\texttt{redis\_down} & 3/3 & 10.2 & 14.7 & 21.7 & {\scriptsize cache\_bypass} \\
+\texttt{redis\_latency} & 3/3 & 11.1 & 15.8 & 22.4 & {\scriptsize cache\_bypass} \\
+\texttt{postgres\_latency} & 3/3 & 12.3 & 17.2 & 81.9 & {\scriptsize restart\_postgres,warm\_cache; warm\_cache} \\
+\texttt{postgres\_down} & 3/3 & 14.5 & 19.0 & 34.7 & {\scriptsize restart\_postgres} \\
+\texttt{api\_crash} & 3/3 & 12.8 & 17.4 & 36.3 & {\scriptsize restart\_api} \\
+\midrule
+\texttt{redis\_partition} & 3/3 & 11.5 & 16.1 & 21.0 & {\scriptsize cache\_bypass} \\
+\texttt{redis\_down\_slow\_db} & 0/3 & 10.0 & 14.4 & -- & {\scriptsize cache\_bypass,restart\_postgres; cache\_bypass,restart\_postgres,restart\_redis} \\
+\bottomrule
+\end{tabular}

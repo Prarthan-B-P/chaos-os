@@ -1,0 +1,34 @@
+% The on-call control loop, mapped onto MAPE-K. Compile: tectonic -X compile loop.tex
+\documentclass[tikz,border=4pt]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage{tgheros}
+\renewcommand*\familydefault{\sfdefault}
+\usetikzlibrary{arrows.meta}
+\definecolor{ink}{HTML}{0E0E0F}
+\definecolor{muted}{HTML}{6B6965}
+\definecolor{accent}{HTML}{C84A18}
+\definecolor{soft}{HTML}{FDF0EA}
+\begin{document}
+\hyphenpenalty=10000\exhyphenpenalty=10000
+\begin{tikzpicture}[
+  font=\footnotesize,
+  stage/.style={draw=ink, line width=0.6pt, fill=white, align=left, text width=43mm,
+                inner sep=4pt, minimum height=18mm},
+  key/.style={draw=accent, line width=0.8pt, fill=soft, align=center, text width=33mm,
+              inner sep=4pt, minimum height=12mm},
+  arr/.style={-{Stealth[length=2mm]}, line width=0.8pt, draw=ink},
+]
+\node[stage] (m) at (-3.5, 2.4) {{\bfseries MONITOR}\\[1pt] Synthetic users send 2~req/s; a request is good when it returns 200~OK within 300~ms. Prometheus scrapes every 5~s.};
+\node[stage] (a) at ( 3.5, 2.4) {{\bfseries ANALYZE}\\[1pt] Page when the error budget burns over 14.4 times too fast in both the last minute and the last 20~s. The agent confirms with its own probe.};
+\node[stage] (p) at ( 3.5,-2.4) {{\bfseries PLAN}\\[1pt] A policy proposes one action from the symptoms. The safety validator checks it; a high-impact action waits for a human.};
+\node[stage] (e) at (-3.5,-2.4) {{\bfseries EXECUTE}\\[1pt] An Ansible playbook runs it. A step heals after 3~healthy seconds; the incident closes after 5, otherwise the next step runs (at most 3).};
+\node[key] (k) at (0,0) {{\bfseries KNOWLEDGE}\\ SQLite: every trial, step and incident, with post-mortems};
+\draw[arr] (m.east) -- (a.west);
+\draw[arr] (a.south) -- (p.north);
+\draw[arr] (p.west) -- (e.east);
+\draw[arr] (e.north) -- (m.south);
+\draw[arr, draw=accent, dashed] (k) -- (p);
+\draw[arr, draw=accent, dashed] (e) -- (k);
+\draw[arr, draw=accent, dashed] (a) -- (k);
+\end{tikzpicture}
+\end{document}

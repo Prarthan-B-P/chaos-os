@@ -1,0 +1,36 @@
+\subsection{On-call mode}
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.92\textwidth]{fig_oncall_timeline.pdf}
+\caption{An unannounced \act{redis\_down}, end to end. The 20\,s burn rate reacts first; the page
+fires when the slower 1\,min window also exceeds 14.4 (multi-window rule). The agent confirms with
+its own probe, runs \act{cache\_bypass}, and traffic is healthy about 24\,s after the fault; the alert
+then clears as the windows drain.}
+\label{fig:timeline}
+\end{figure*}
+
+\begin{table}[t]
+\caption{On-call campaign: unannounced faults, three each, heuristic responder; medians in seconds
+from injection to the alert, to the agent engaging, and to sustained healthy traffic.}
+\label{tab:campaign}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\input{generated/tab_campaign.tex}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_campaign.pdf}
+\caption{On-call campaign, per fault: median time until the alert fires, the agent engages, and user
+traffic is healthy again.}
+\label{fig:campaign}
+\end{figure}
+
+Fig.~\ref{fig:timeline} traces one unannounced fault. Across the campaign
+(Table~\ref{tab:campaign}, Fig.~\ref{fig:campaign}) the agent healed \ocHealed{} of \ocFaults{}
+unannounced faults without being told what was injected. The median time from injection to the alert
+was \ocMedDetect\,s, to the agent engaging \ocMedEngage\,s, and, for healed faults, to sustained healthy
+traffic \ocMedRecover\,s; \ocEscalated{} incidents were escalated to a human, and \ocApprovals{}
+high-impact actions ran only after the scripted operator's approval.
+\input{sections/results-oncall-findings.tex}

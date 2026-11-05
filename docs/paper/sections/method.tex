@@ -1,0 +1,44 @@
+\section{Experimental Methodology}
+\label{sec:method}
+\textbf{Testbed.} All experiments ran on one laptop (Intel Core i5-12450H, 8 cores/12 threads, 16\,GB
+RAM, Windows 11) with Docker Desktop 29.8 on WSL2 (12 vCPUs and 7.6\,GB for the Docker VM). The lab
+comprises eleven long-running containers (frontend, API, Redis~7.2, PostgreSQL~16, Toxiproxy~2.9,
+synthetic users, Prometheus~2.53, Alertmanager~0.27, Grafana~11.1, the on-call agent and the dashboard).
+Recovery actions run with ansible-core~2.21; LLM policies use gpt-4o-mini at temperature~0.
+
+\textbf{Trial protocol.} Each trial resets the lab (faults removed, stopped containers started,
+readiness awaited, bypass off, Redis flushed), warms up for 15\,s at 20 requests/s, injects the fault,
+detects the outage within 15\,s, runs the remediation loop, keeps the load running until recovery or
+a timeout (60\,s for fixed actions, 90\,s for policies), and resets again. The synthetic users
+(2 requests/s) and the on-call agent run throughout; the shared lab lock makes the agent stand down
+during experiments.
+
+\textbf{Studies.}
+\begin{enumerate}
+\item \emph{Fixed-action matrix}: every training fault $\times$ every action, two trials each. These
+  trials also provide the bandit's first training data.
+\item \emph{Policy comparison}: runbook, heuristic, bandit and LLM on the training faults (two
+  trials each) and, after freezing the policies, on the held-out faults (three trials each).
+\item \emph{Learning curve}: the bandit is replayed over all logged training steps in 30 random
+  orders and, after every $k$ steps, scored on how often it selects the best measured action for each
+  logged context; the runbook and heuristic are scored on the same contexts. The ``best'' action per
+  fault is the one with the highest mean measured reward.
+\item \emph{LLM ablation}: a $2\times2$ design over \{no tools, tools\} $\times$ \{no guidance, SRE
+  guidance\}, two trials per fault and variant, all seven faults, run as one batch under identical
+  conditions (\nAblation{} trials).
+\item \emph{Safety}: red-team runs plus an audit of every blocked proposal across all studies.
+\item \emph{On-call campaign}: each of the seven faults injected unannounced three times through the
+  dashboard API, one at a time, with the heuristic responder. A scripted operator approves high-impact
+  requests after a fixed 5\,s reaction time. After each fault the lab is reset and the next fault is
+  injected only once no alert is firing.
+\item \emph{CI/CD}: the pipeline on \texttt{main} and on a branch with a seeded one-character bug.
+\end{enumerate}
+
+\textbf{Metrics.} Recovery rate and recovery time (Section~\ref{sec:measure}); failed requests per
+incident; best-action accuracy and regret for the learning curve; for on-call incidents, time to
+alert (Prometheus alert start minus injection), time to engage (page received minus injection) and
+time to recover (start of sustained healthy probe traffic minus injection).
+
+\textbf{Reproducibility.} The repository contains the lab, the experiment CLI, the measurement
+campaign script, and the scripts that regenerate every figure and table in this paper from the
+experiment database.

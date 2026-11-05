@@ -1,0 +1,15 @@
+\begin{table}[t]
+\caption{Jenkins stage durations for \texttt{main} and for the branch with the seeded bug ($\times$:
+the failing stage; later stages do not run). The last stage includes teardown.}
+\label{tab:ci}
+\centering
+\small
+\input{generated/tab_ci.tex}
+\end{table}
+
+Table~\ref{tab:ci} shows a full pipeline run. On \texttt{main} every stage passed in under six
+minutes: the six gate checks recovered in 2.0--12.2\,s against deadlines of 10--20\,s, and in the
+on-call drill the alert fired 8.9\,s after the unannounced fault, the agent engaged at 13.9\,s and
+traffic was healthy at 19.6\,s. On the seeded-bug branch the same pipeline passed unit tests, alert
+rules, the security scan and the smoke test, and failed the resilience gate on exactly the two
+\act{cache\_bypass} checks (no recovery), while the other four checks passed.

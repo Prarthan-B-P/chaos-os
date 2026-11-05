@@ -1,0 +1,20 @@
+\subsection{LLM ablation: tools versus advice}
+\begin{table*}[t]
+\caption{LLM ablation ($2\times2$, two trials per cell, one batch): recovered/trials, median recovery in
+seconds (range). Bold: fastest full recovery per fault among the four variants.}
+\label{tab:ablation}
+\centering
+\small
+\input{generated/tab_ablation.tex}
+\end{table*}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_ablation.pdf}
+\caption{LLM ablation. Squares: no tools; circles: tool-using agent. Hollow: no guidance; filled:
+generic SRE guidance. Median recovery (range); $\times$: not recovered.}
+\label{fig:ablation}
+\end{figure}
+
+Table~\ref{tab:ablation} and Fig.~\ref{fig:ablation} separate the two factors.
+\input{sections/results-ablation-findings.tex}

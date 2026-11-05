@@ -6,8 +6,15 @@ CHAOS OS is a local resilience lab. It injects real failures into a small web
 shop running under steady load, lets competing **recovery policies** choose
 what to do, checks every proposed action against a **safety validator**,
 measures recovery **request by request**, and gates releases in **Jenkins** on
-the results. A contextual bandit learns which fix works for which symptoms,
-and gpt-4o-mini explains the evidence in plain English.
+the results. A contextual bandit learns which fix works for which symptoms, an
+**LLM agent** investigates with real tools before acting, and an always-on
+**on-call agent**, paged by SLO burn-rate alerts, heals failures nobody
+announced, asking a human before anything high impact. gpt-4o-mini explains
+the evidence in plain English.
+
+📄 **Read more:** the [IEEE-format paper](docs/paper/CHAOS-OS-IEEE-paper.pdf) ·
+the [team study guide](docs/study-guide/CHAOS-OS-Study-Guide.pdf)
+([Word](docs/study-guide/CHAOS-OS-Study-Guide.docx)) · the [demo runbook](docs/DEMO.md)
 
 **Headline results (all measured, see [Results](#results)):**
 
@@ -22,35 +29,32 @@ and gpt-4o-mini explains the evidence in plain English.
   bandit recovered 3/3 in 0.8 s, while the runbook failed 3/3 and the LLM took 43 s.
 - **It does not solve compound failures.** No policy recovered from "Redis
   killed + slow database" (0/12). That is the clearest limitation.
+- **For the LLM, advice and evidence interact.** In a 2 x 2 ablation, one
+  paragraph of generic SRE guidance replaced gpt-4o-mini's restart-first habit
+  with a bypass-first habit (Redis latency 50.1 s → 3.3 s), but alone it never
+  restarted a crashed database; tools alone only added 8-12 s; tools plus
+  guidance handled both kinds of fault (see [LLM ablation](#5-llm-ablation-tools-x-advice)).
+- **The on-call agent heals failures nobody announced:** 18 of 21 unannounced
+  faults healed (the 3 others, the unsolvable compound fault, were escalated),
+  median 11.8 s from fault to page and 25.8 s to healthy traffic,
+  with human approval for high-impact fixes (see [On-call mode](#on-call-mode)).
 - **The safety validator blocked every unsafe proposal**; zero unsafe actions
   ever executed.
 - **The CI gate catches a bug that unit and smoke tests miss** (see
-  [Resilience gate](#resilience-gate)).
+  [Resilience gate](#resilience-gate)), and every build also runs secret,
+  dependency and image scans and an unannounced on-call drill.
 
 ---
 
 ## Architecture
 
-```
-                         ┌──────────┐    ┌─────────┐    ┌───────────┐    ┌──────────┐
-             browser ───►│ frontend │───►│   api   │───►│ toxiproxy │───►│  redis   │
-                         │  nginx   │    │ FastAPI │    │ (faults)  │───►│ postgres │
-                         └──────────┘    └────┬────┘    └───────────┘    └──────────┘
-                              ▲               │ /metrics, /ready
-     load (20 req/s)          │        ┌──────▼─────┐   ┌─────────┐
-     + faults          ┌──────┴─────┐  │ prometheus │──►│ grafana │◄── annotations
-                       │ controller │  └────────────┘   └─────────┘
-                       │ (chaosctl) │── policy proposes ─► safety validator ─► Ansible playbook
-                       └──────┬─────┘
-                              │ SQLite: every trial and every step
-              ┌───────────────┴──────────────┐
-              │ evidence dashboard (React)   │── gpt-4o-mini: Q&A, analysis, post-mortems
-              └──────────────────────────────┘
-  jenkins (separate) ── build → unit tests → deploy → smoke → resilience gate → report → teardown
-```
+![CHAOS OS architecture](docs/paper/figures/architecture.png)
 
 The API reaches Redis and Postgres **through Toxiproxy**, so latency and
-outages can be injected without touching the services themselves.
+outages can be injected without touching the services themselves. Synthetic
+users measure the SLO from the client side; Prometheus pages the on-call agent
+through Alertmanager. Jenkins runs separately and gives every build its own
+isolated copy of the lab.
 
 ## How an experiment works
 
@@ -108,7 +112,39 @@ only once the policies were frozen.
 | `heuristic` | Expert rules written from the measured characteristics of each failure |
 | `bandit` | LinUCB contextual bandit trained on logged steps; reward = heal speed − safety cost |
 | `llm` | gpt-4o-mini reads the symptoms and picks an action (still safety-checked) |
+| `llm_agent` | gpt-4o-mini **agent** that must investigate with read-only tools (PromQL, container logs, container states, readiness) before deciding; every tool call is kept as an auditable trail |
+| `llm_sre`, `llm_agent_sre` | Ablation variants: the same two, plus one paragraph of generic SRE guidance (no failure names) |
 | `adversarial` | Red-team policy that proposes unsafe actions on purpose |
+
+## On-call mode
+
+Experiments know what they broke and when. On-call mode does not: it heals
+failures **nobody announced**, the way a human on-call engineer does.
+
+1. **Synthetic users** (2 req/s) measure the SLI: a request is good when it
+   returns 200 within 300 ms. The **SLO** is 99 % good.
+2. **Prometheus** pages when the error budget burns more than **14.4x** too fast
+   over both 1 minute and 20 seconds (the SRE Workbook's multi-window
+   burn-rate rule, scaled to lab time; unit-tested with `promtool`).
+3. **Alertmanager** delivers the page to the **on-call agent**'s webhook.
+4. The agent **confirms** with its own probe traffic (a stale page opens no
+   incident), then runs the same remediation loop as experiments, through the
+   safety validator.
+5. **High-impact actions wait for a human** on the dashboard's On-call page;
+   no decision in 60 s means the action is not run (fail safe).
+6. It closes the incident on sustained recovery, otherwise **escalates** (no
+   retry loops), and gpt-4o-mini writes the **post-mortem**.
+
+The agent runs in its own container and never reads the chaos log. On the chaos
+side, the dashboard can **Break it** (a chosen or random fault, unannounced), a
+**chaos monkey** can inject random faults on a jittered schedule, and every
+fault is rolled back after 5 minutes. A scorecard matches each fault to the
+incident the agent opened and measures time to alert, to engage and to recover.
+
+```powershell
+docker compose run --rm controller drill --scenario redis_down   # unannounced drill (also a CI stage)
+python scripts/oncall_campaign.py --reps 3                      # the measurement campaign
+```
 
 ---
 
@@ -171,7 +207,54 @@ and scored on how often it picks the best measured action:
 
 Fixed baselines: rule-based runbook **40 %**, expert heuristic **98 %**.
 
-### 5. Safety
+### 5. LLM ablation (tools x advice)
+
+To see *why* the LLM behaves as it does, four variants ran as one batch (56
+trials, 2 per cell): with or without **tools** (the agent investigates with
+PromQL, logs, container states and the readiness check before deciding), and with
+or without one paragraph of **generic SRE guidance** (no fault or action names).
+Median recovery:
+
+| Failure | LLM | + guidance | Agent (tools) | Agent + guidance |
+|---|---|---|---|---|
+| `redis_down` | 4.1 s | **3.1 s** | 15.6 s | 8.1 s |
+| `redis_latency` | 50.1 s | **3.3 s** | 58.6 s | 8.0 s |
+| `postgres_latency` | ✕ 0/2 | ✕ 0/2 | ✕ 0/2 | ✕ 0/2 |
+| `postgres_down` | **7.6 s** | ✕ 0/2 | 17.1 s | 18.9 s |
+| `api_crash` | **13.2 s** | 44.1 s | 23.5 s | 22.1 s |
+| `redis_partition` (held out) | 43.0 s | **2.3 s** | 51.1 s | 28.0 s (6.5–49.5) |
+| `redis_down_slow_db` (held out) | ✕ 0/2 | ✕ 0/2 | ✕ 0/2 | ✕ 0/2 |
+| **Recovered** | **10/14** | **8/14** | **10/14** | **10/14** |
+
+- **Advice changes the habit, not the reasoning.** With guidance and no tools the
+  model chose `cache_bypass` first in all 14 trials: fastest where bypass is right,
+  but it never restarted the crashed database and was 3x slower on the crashed API.
+- **Tools alone only cost time** (3.6 tool calls per decision, +8-12 s per
+  incident) and did not change the first action on any fault where it mattered.
+- **Tools + guidance was the most robust:** bypass for Redis faults, restarts for
+  real crashes. On `postgres_down` the agent queried readiness, metrics and logs,
+  stated "PostgreSQL is down" and restarted it, where the guided LLM without tools
+  bypassed the cache.
+- **No LLM found `warm_cache`** for the slow database (0/8), which the bandit and
+  the heuristic learned from measured outcomes.
+
+### 6. On-call mode: 21 unannounced faults
+
+Every fault injected 3 times through the dashboard, one at a time from steady
+state, heuristic responder, a scripted operator approving high-impact actions
+after 5 s ([data](docs/paper/data/oncall-campaign.json)). Medians, seconds after the fault:
+
+| Failure | Healed | Alert | Agent engaged | Healthy | Actions |
+|---|---|---|---|---|---|
+| `redis_down` | 3/3 | 10.2 | 14.7 | 21.7 | cache_bypass |
+| `redis_latency` | 3/3 | 11.1 | 15.8 | 22.4 | cache_bypass |
+| `postgres_latency` | 3/3 | 12.3 | 17.2 | 81.9 | (restart_postgres,) warm_cache |
+| `postgres_down` | 3/3 | 14.5 | 19.0 | 34.7 | restart_postgres (approved) |
+| `api_crash` | 3/3 | 12.8 | 17.4 | 36.3 | restart_api |
+| `redis_partition` | 3/3 | 11.5 | 16.1 | 21.0 | cache_bypass |
+| `redis_down_slow_db` | 0/3 escalated | 10.0 | 14.4 | – | budget used, handed to a human |
+
+### 7. Safety
 
 - Red-team run 1 (`redis_down`): the adversarial policy proposed
   `drop_database` and `restart_grafana`. **Both were blocked**; only the
@@ -227,10 +310,11 @@ python scripts/smoke_test.py            # should print PASS
 
 | Service | URL |
 |---|---|
-| **Evidence dashboard** | http://localhost:8090 |
+| **Evidence dashboard** | http://localhost:8090 (On-call console: `#/oncall`) |
 | Jenkins | http://localhost:8081 |
-| Grafana (CHAOS OS → Service Health) | http://localhost:3000 (admin / admin) |
+| Grafana (CHAOS OS → Service Health, incl. the SLO row) | http://localhost:3000 (admin / admin) |
 | Prometheus | http://localhost:9090 |
+| Alertmanager | http://localhost:9093 |
 | Demo shop | http://localhost:8080 |
 | API docs | http://localhost:8000/docs |
 
@@ -282,8 +366,34 @@ Unlock Jenkins at http://localhost:8081 (plugins: **None**, they are
 pre-installed). The **chaos-os-ci** multibranch job is defined as code in
 [jenkins/jobs/chaos-os-ci/config.xml](jenkins/jobs/chaos-os-ci/config.xml),
 builds every branch, and polls GitHub every 5 minutes. Each build gets its own
-isolated lab (`chaosos-ci-<executor>`, no host ports) and archives a
-resilience report.
+isolated lab (`chaosos-ci-<executor>`, no host ports).
+
+![Jenkins pipeline](docs/paper/figures/pipeline.png)
+
+| Stage | Gate |
+|---|---|
+| Build images | every image builds |
+| Unit tests | 45 tests (analysis, safety, policies, bandit, LLM agent, on-call records) |
+| Alert rules | `promtool check config`, `promtool test rules` (4 cases), `amtool check-config` |
+| Security scan | [scripts/security-scan.sh](scripts/security-scan.sh): gitleaks over code **and git history**; Trivy over pinned Python/npm dependencies (incl. build tools) and Dockerfiles; Trivy over every built image; a CycloneDX **SBOM** per image (archived) |
+| Deploy lab + smoke test | the stack becomes healthy and serves through nginx |
+| Resilience gate | 6 real faults, each must recover within its deadline |
+| On-call drill | Redis is killed unannounced; the agent must heal it within 120 s |
+
+Security policy: any secret, any HIGH/CRITICAL misconfiguration or fixable
+dependency CVE, or a fixable CRITICAL image CVE fails the build. Accepted risks
+live in [.trivyignore.yaml](.trivyignore.yaml), each with a written reason. The
+first scan found 2 HIGH CVEs in ansible-core (upgraded to 2.21.6), 1 HIGH and
+12 MEDIUM advisories in the Vite build tool (upgraded to 6.4.5, now locked with
+`npm ci`), 12 containers running as root (7 now run as non-root users,
+including an unprivileged nginx; 5 are justified exceptions that must drive the
+Docker socket or drop root themselves), and fixable CRITICAL CVEs in three images:
+an old Alpine base under nginx (61 HIGH/CRITICAL, now 0 after moving to
+nginx-unprivileged 1.30 with an OS upgrade at build time), an old Docker CLI
+binary (upgraded to 29.8), and `gosu` in the official Postgres image (accepted
+until 2027-03-01: it runs once at start-up and handles no untrusted input).
+Remaining HIGH findings (Starlette via FastAPI; Go stdlib in two binaries) are
+reported in the archived scan, not hidden.
 
 ### Deploy to a server
 
@@ -307,14 +417,16 @@ free Cloudflare tunnel (no account or card), behind the same login.
 ## Project layout
 
 ```
-app/              target application (api, frontend, db)
+app/              target application (api, frontend, db) + synthetic users (traffic, the SLI)
 chaos/            Toxiproxy config
-controller/       chaosctl: load, experiments, analysis, safety, policies, bandit, gen AI
-dashboard/        evidence dashboard: React frontend + FastAPI backend
+controller/       chaosctl: load, experiments, analysis, safety, policies, bandit, LLM, agent, on-call
+dashboard/        evidence dashboard: React frontend + FastAPI backend (incl. the On-call console)
 ansible/          recovery playbooks + service allowlist
-observability/    Prometheus and Grafana (dashboard + experiment annotations)
+observability/    Prometheus (SLO rules + rule tests), Alertmanager, Grafana
 jenkins/          Jenkins image and job-as-code
 deploy/           production overlay (Caddy, HTTPS, login), Ansible server provisioning, laptop sharing tunnel
+scripts/          smoke test, security scan, on-call measurement campaign
+docs/             demo runbook, IEEE paper (LaTeX + figure/table generators), team study guide (Word/PDF)
 safety-policy.yml safety rules every action is checked against
 resilience-gate.yml  release gate checks
 Jenkinsfile       CI pipeline
@@ -330,7 +442,12 @@ Jenkinsfile       CI pipeline
 - [x] Phase 6: held-out generalization and safety evaluation
 - [x] Phase 7: evidence dashboard, gen-AI insights, Grafana annotations, CI report
 - [x] Phase 8: results and write-up
+- [x] Phase 9: deployment (Caddy + HTTPS + login, Ansible provisioning, laptop tunnel)
+- [x] Phase 10: on-call mode: SLOs, burn-rate alerts, Alertmanager, autonomous agent, human approvals, chaos monkey
+- [x] Phase 11: tool-using LLM agent and the 2 x 2 LLM ablation
+- [x] Phase 12: DevSecOps (gitleaks, Trivy, SBOMs, non-root images), alert-rule tests, on-call drill in CI
+- [x] Phase 13: IEEE-format paper and team study guide
 
 **Future work:** sequence-aware policies for compound failures, more trials
-with confidence intervals, a Kubernetes port with Chaos Mesh, and online
-(exploring) bandit training in CI.
+with confidence intervals, a Kubernetes port with Chaos Mesh and SLO-gated
+canary releases, and online (exploring) bandit training in CI.

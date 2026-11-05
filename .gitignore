@@ -20,3 +20,6 @@ docs/study-guide/node_modules/
 docs/paper/*.aux
 docs/paper/*.log
 docs/paper/chaos-os-ieee.pdf
+
+# Local copies of the final reports (the sources and PDFs are in docs/)
+Reports/

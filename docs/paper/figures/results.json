@@ -1,0 +1,1448 @@
+{
+  "generated_at": "2026-11-05T05:35:35+00:00",
+  "trial_count": 182,
+  "matrix": {
+    "api_crash|warm_cache": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 769,
+      "actions": [
+        "warm_cache"
+      ]
+    },
+    "api_crash|cache_bypass": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 758.5,
+      "actions": [
+        "cache_bypass"
+      ]
+    },
+    "api_crash|restart_api": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 14.575,
+      "min_s": 14.5,
+      "max_s": 14.65,
+      "failed": 252.5,
+      "actions": [
+        "restart_api"
+      ]
+    },
+    "api_crash|restart_postgres": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 1128,
+      "actions": [
+        "restart_postgres"
+      ]
+    },
+    "api_crash|restart_redis": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 1118,
+      "actions": [
+        "restart_redis"
+      ]
+    },
+    "postgres_down|warm_cache": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 447,
+      "actions": [
+        "warm_cache"
+      ]
+    },
+    "postgres_down|cache_bypass": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 576.5,
+      "actions": [
+        "cache_bypass"
+      ]
+    },
+    "postgres_down|restart_api": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 736.5,
+      "actions": [
+        "restart_api"
+      ]
+    },
+    "postgres_down|restart_postgres": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 6.875,
+      "min_s": 5.85,
+      "max_s": 7.9,
+      "failed": 76.5,
+      "actions": [
+        "restart_postgres"
+      ]
+    },
+    "postgres_down|restart_redis": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 744,
+      "actions": [
+        "restart_redis"
+      ]
+    },
+    "postgres_latency|warm_cache": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 9.025,
+      "min_s": 8.9,
+      "max_s": 9.15,
+      "failed": 116,
+      "actions": [
+        "warm_cache"
+      ]
+    },
+    "postgres_latency|cache_bypass": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 555.5,
+      "actions": [
+        "cache_bypass"
+      ]
+    },
+    "postgres_latency|restart_api": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 682,
+      "actions": [
+        "restart_api"
+      ]
+    },
+    "postgres_latency|restart_postgres": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 624.5,
+      "actions": [
+        "restart_postgres"
+      ]
+    },
+    "postgres_latency|restart_redis": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 612.5,
+      "actions": [
+        "restart_redis"
+      ]
+    },
+    "redis_latency|warm_cache": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 599.5,
+      "actions": [
+        "warm_cache"
+      ]
+    },
+    "redis_latency|cache_bypass": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 1.95,
+      "min_s": 1.9,
+      "max_s": 2.0,
+      "failed": 38,
+      "actions": [
+        "cache_bypass"
+      ]
+    },
+    "redis_latency|restart_api": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 920,
+      "actions": [
+        "restart_api"
+      ]
+    },
+    "redis_latency|restart_postgres": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 919.5,
+      "actions": [
+        "restart_postgres"
+      ]
+    },
+    "redis_latency|restart_redis": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 919.5,
+      "actions": [
+        "restart_redis"
+      ]
+    },
+    "redis_down|warm_cache": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 597.5,
+      "actions": [
+        "warm_cache"
+      ]
+    },
+    "redis_down|cache_bypass": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 1.8,
+      "min_s": 1.75,
+      "max_s": 1.85,
+      "failed": 34,
+      "actions": [
+        "cache_bypass"
+      ]
+    },
+    "redis_down|restart_api": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 918.5,
+      "actions": [
+        "restart_api"
+      ]
+    },
+    "redis_down|restart_postgres": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 898.5,
+      "actions": [
+        "restart_postgres"
+      ]
+    },
+    "redis_down|restart_redis": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 1.975,
+      "min_s": 1.95,
+      "max_s": 2.0,
+      "failed": 33,
+      "actions": [
+        "restart_redis"
+      ]
+    }
+  },
+  "policies": {
+    "api_crash|llm": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 16.135,
+      "min_s": 16.1,
+      "max_s": 16.17,
+      "failed": 278,
+      "actions": [
+        "restart_api"
+      ]
+    },
+    "api_crash|bandit": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 16.0,
+      "min_s": 16.0,
+      "max_s": 16.0,
+      "failed": 277.5,
+      "actions": [
+        "restart_api"
+      ]
+    },
+    "api_crash|heuristic": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 15.975,
+      "min_s": 15.95,
+      "max_s": 16.0,
+      "failed": 277.5,
+      "actions": [
+        "restart_api"
+      ]
+    },
+    "api_crash|rule_based": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 16.1,
+      "min_s": 16.0,
+      "max_s": 16.2,
+      "failed": 278.5,
+      "actions": [
+        "restart_api"
+      ]
+    },
+    "postgres_down|llm": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 12.0,
+      "min_s": 12.0,
+      "max_s": 12.0,
+      "failed": 150,
+      "actions": [
+        "restart_postgres"
+      ]
+    },
+    "postgres_down|bandit": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 43.25,
+      "min_s": 8.0,
+      "max_s": 78.5,
+      "failed": 674,
+      "actions": [
+        "restart_postgres",
+        "restart_postgres,warm_cache,cache_bypass"
+      ]
+    },
+    "postgres_down|heuristic": {
+      "n": 3,
+      "recovered": 3,
+      "median_s": 8.0,
+      "min_s": 6.5,
+      "max_s": 10.45,
+      "failed": 97.33333333333333,
+      "actions": [
+        "restart_postgres"
+      ]
+    },
+    "postgres_down|rule_based": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 7.375,
+      "min_s": 7.35,
+      "max_s": 7.4,
+      "failed": 77,
+      "actions": [
+        "restart_postgres"
+      ]
+    },
+    "postgres_latency|llm": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 2322.5,
+      "actions": [
+        "cache_bypass,restart_api,restart_redis",
+        "restart_postgres,cache_bypass,restart_redis"
+      ]
+    },
+    "postgres_latency|bandit": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 32.675,
+      "min_s": 10.1,
+      "max_s": 55.25,
+      "failed": 429,
+      "actions": [
+        "restart_postgres,warm_cache",
+        "warm_cache"
+      ]
+    },
+    "postgres_latency|heuristic": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 9.774999999999999,
+      "min_s": 9.7,
+      "max_s": 9.85,
+      "failed": 127.5,
+      "actions": [
+        "warm_cache"
+      ]
+    },
+    "postgres_latency|rule_based": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 1380,
+      "actions": [
+        "restart_api,restart_postgres",
+        "restart_postgres,restart_api"
+      ]
+    },
+    "redis_latency|llm": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 28.900000000000002,
+      "min_s": 4.95,
+      "max_s": 52.85,
+      "failed": 577,
+      "actions": [
+        "cache_bypass",
+        "restart_redis,cache_bypass"
+      ]
+    },
+    "redis_latency|bandit": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 2.725,
+      "min_s": 2.7,
+      "max_s": 2.75,
+      "failed": 53.5,
+      "actions": [
+        "cache_bypass"
+      ]
+    },
+    "redis_latency|heuristic": {
+      "n": 3,
+      "recovered": 3,
+      "median_s": 2.75,
+      "min_s": 2.75,
+      "max_s": 2.85,
+      "failed": 54.666666666666664,
+      "actions": [
+        "cache_bypass"
+      ]
+    },
+    "redis_latency|rule_based": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 1819.5,
+      "actions": [
+        "restart_redis,restart_api"
+      ]
+    },
+    "redis_down|llm": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 3.975,
+      "min_s": 3.95,
+      "max_s": 4.0,
+      "failed": 73,
+      "actions": [
+        "restart_redis"
+      ]
+    },
+    "redis_down|bandit": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 1.5750000000000002,
+      "min_s": 1.55,
+      "max_s": 1.6,
+      "failed": 29.5,
+      "actions": [
+        "cache_bypass"
+      ]
+    },
+    "redis_down|heuristic": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 1.5750000000000002,
+      "min_s": 1.55,
+      "max_s": 1.6,
+      "failed": 29.5,
+      "actions": [
+        "cache_bypass"
+      ]
+    },
+    "redis_down|rule_based": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 2.925,
+      "min_s": 1.9,
+      "max_s": 3.95,
+      "failed": 52,
+      "actions": [
+        "restart_redis"
+      ]
+    },
+    "redis_down_slow_db|llm": {
+      "n": 3,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 1855.6666666666667,
+      "actions": [
+        "restart_redis,restart_postgres",
+        "restart_redis,restart_postgres,cache_bypass"
+      ]
+    },
+    "redis_down_slow_db|bandit": {
+      "n": 3,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 2368.3333333333335,
+      "actions": [
+        "cache_bypass,restart_api,restart_redis"
+      ]
+    },
+    "redis_down_slow_db|heuristic": {
+      "n": 3,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 2374.6666666666665,
+      "actions": [
+        "cache_bypass,restart_api,restart_redis"
+      ]
+    },
+    "redis_down_slow_db|rule_based": {
+      "n": 3,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 1705.6666666666667,
+      "actions": [
+        "restart_redis,restart_api"
+      ]
+    },
+    "redis_partition|llm": {
+      "n": 3,
+      "recovered": 3,
+      "median_s": 43.4,
+      "min_s": 43.35,
+      "max_s": 43.45,
+      "failed": 867,
+      "actions": [
+        "restart_redis,cache_bypass"
+      ]
+    },
+    "redis_partition|bandit": {
+      "n": 3,
+      "recovered": 3,
+      "median_s": 0.85,
+      "min_s": 0.8,
+      "max_s": 0.85,
+      "failed": 15.666666666666666,
+      "actions": [
+        "cache_bypass"
+      ]
+    },
+    "redis_partition|heuristic": {
+      "n": 3,
+      "recovered": 3,
+      "median_s": 0.9,
+      "min_s": 0.8,
+      "max_s": 1.1,
+      "failed": 17.666666666666668,
+      "actions": [
+        "cache_bypass"
+      ]
+    },
+    "redis_partition|rule_based": {
+      "n": 3,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 1799.3333333333333,
+      "actions": [
+        "restart_redis,restart_api"
+      ]
+    }
+  },
+  "learning_curve": {
+    "steps": 179,
+    "curve": [
+      {
+        "steps_seen": 0,
+        "accuracy": 0.0,
+        "regret": 0.6074164784544085
+      },
+      {
+        "steps_seen": 16,
+        "accuracy": 0.6165735567970205,
+        "regret": 0.24929742132153188
+      },
+      {
+        "steps_seen": 33,
+        "accuracy": 0.7459962756052142,
+        "regret": 0.17040208492869477
+      },
+      {
+        "steps_seen": 49,
+        "accuracy": 0.7960893854748603,
+        "regret": 0.1416657098985826
+      },
+      {
+        "steps_seen": 65,
+        "accuracy": 0.8163873370577281,
+        "regret": 0.1279196221466142
+      },
+      {
+        "steps_seen": 81,
+        "accuracy": 0.8227188081936685,
+        "regret": 0.11924756490854697
+      },
+      {
+        "steps_seen": 98,
+        "accuracy": 0.819366852886406,
+        "regret": 0.12486114261445047
+      },
+      {
+        "steps_seen": 114,
+        "accuracy": 0.8411545623836126,
+        "regret": 0.11254157274004378
+      },
+      {
+        "steps_seen": 130,
+        "accuracy": 0.8536312849162011,
+        "regret": 0.10694092773834027
+      },
+      {
+        "steps_seen": 146,
+        "accuracy": 0.8618249534450652,
+        "regret": 0.10161624265505477
+      },
+      {
+        "steps_seen": 163,
+        "accuracy": 0.8649906890130353,
+        "regret": 0.10234120216742974
+      },
+      {
+        "steps_seen": 179,
+        "accuracy": 0.88268156424581,
+        "regret": 0.0893562117584464
+      }
+    ],
+    "baselines": {
+      "rule_based": {
+        "accuracy": 0.329608938547486,
+        "regret": 0.43183870721065665
+      },
+      "heuristic": {
+        "accuracy": 0.8491620111731844,
+        "regret": 0.11842245277999468
+      }
+    },
+    "best": {
+      "redis_latency": "cache_bypass",
+      "postgres_down": "restart_postgres",
+      "redis_down": "cache_bypass",
+      "postgres_latency": "warm_cache",
+      "api_crash": "restart_api"
+    }
+  },
+  "ablation": {
+    "redis_down_slow_db|llm_agent_sre": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 1821.5,
+      "actions": [
+        "cache_bypass,restart_redis",
+        "restart_redis,cache_bypass"
+      ]
+    },
+    "redis_down_slow_db|llm_agent": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 2116.5,
+      "actions": [
+        "restart_redis,restart_api"
+      ]
+    },
+    "redis_down_slow_db|llm_sre": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 2469.5,
+      "actions": [
+        "cache_bypass,restart_api,restart_redis"
+      ]
+    },
+    "redis_down_slow_db|llm": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 1997,
+      "actions": [
+        "restart_redis,restart_postgres"
+      ]
+    },
+    "redis_partition|llm_agent_sre": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 27.975,
+      "min_s": 6.45,
+      "max_s": 49.5,
+      "failed": 558.5,
+      "actions": [
+        "cache_bypass",
+        "restart_redis,cache_bypass"
+      ]
+    },
+    "redis_partition|llm_agent": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 51.099999999999994,
+      "min_s": 50.9,
+      "max_s": 51.3,
+      "failed": 1021,
+      "actions": [
+        "restart_redis,cache_bypass"
+      ]
+    },
+    "redis_partition|llm_sre": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 2.3,
+      "min_s": 2.3,
+      "max_s": 2.3,
+      "failed": 45,
+      "actions": [
+        "cache_bypass"
+      ]
+    },
+    "redis_partition|llm": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 43.0,
+      "min_s": 42.5,
+      "max_s": 43.5,
+      "failed": 859,
+      "actions": [
+        "restart_redis,cache_bypass"
+      ]
+    },
+    "api_crash|llm_agent_sre": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 22.15,
+      "min_s": 21.0,
+      "max_s": 23.3,
+      "failed": 422.5,
+      "actions": [
+        "restart_api"
+      ]
+    },
+    "api_crash|llm_agent": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 23.475,
+      "min_s": 23.25,
+      "max_s": 23.7,
+      "failed": 468,
+      "actions": [
+        "restart_api"
+      ]
+    },
+    "api_crash|llm_sre": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 44.075,
+      "min_s": 42.6,
+      "max_s": 45.55,
+      "failed": 860.5,
+      "actions": [
+        "cache_bypass,restart_api"
+      ]
+    },
+    "api_crash|llm": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 13.15,
+      "min_s": 12.8,
+      "max_s": 13.5,
+      "failed": 242.5,
+      "actions": [
+        "restart_api"
+      ]
+    },
+    "postgres_down|llm_agent_sre": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 18.924999999999997,
+      "min_s": 15.45,
+      "max_s": 22.4,
+      "failed": 246,
+      "actions": [
+        "restart_postgres"
+      ]
+    },
+    "postgres_down|llm_agent": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 17.075,
+      "min_s": 12.5,
+      "max_s": 21.65,
+      "failed": 213,
+      "actions": [
+        "restart_postgres"
+      ]
+    },
+    "postgres_down|llm_sre": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 2452.5,
+      "actions": [
+        "cache_bypass,restart_api,restart_redis"
+      ]
+    },
+    "postgres_down|llm": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 7.550000000000001,
+      "min_s": 7.15,
+      "max_s": 7.95,
+      "failed": 76.5,
+      "actions": [
+        "restart_postgres"
+      ]
+    },
+    "postgres_latency|llm_agent_sre": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 2083,
+      "actions": [
+        "cache_bypass,restart_api",
+        "restart_postgres,cache_bypass,restart_api"
+      ]
+    },
+    "postgres_latency|llm_agent": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 1193.5,
+      "actions": [
+        "restart_postgres,cache_bypass"
+      ]
+    },
+    "postgres_latency|llm_sre": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 2434.5,
+      "actions": [
+        "cache_bypass,restart_api,restart_redis"
+      ]
+    },
+    "postgres_latency|llm": {
+      "n": 2,
+      "recovered": 0,
+      "median_s": null,
+      "min_s": null,
+      "max_s": null,
+      "failed": 2225.5,
+      "actions": [
+        "cache_bypass,restart_api,restart_redis",
+        "restart_postgres,cache_bypass,restart_redis"
+      ]
+    },
+    "redis_latency|llm_agent_sre": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 8.0,
+      "min_s": 7.7,
+      "max_s": 8.3,
+      "failed": 159,
+      "actions": [
+        "cache_bypass"
+      ]
+    },
+    "redis_latency|llm_agent": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 58.6,
+      "min_s": 58.5,
+      "max_s": 58.7,
+      "failed": 1171,
+      "actions": [
+        "restart_redis,cache_bypass"
+      ]
+    },
+    "redis_latency|llm_sre": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 3.3,
+      "min_s": 3.1,
+      "max_s": 3.5,
+      "failed": 65,
+      "actions": [
+        "cache_bypass"
+      ]
+    },
+    "redis_latency|llm": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 50.1,
+      "min_s": 49.95,
+      "max_s": 50.25,
+      "failed": 1001,
+      "actions": [
+        "restart_redis,cache_bypass"
+      ]
+    },
+    "redis_down|llm_agent_sre": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 8.075,
+      "min_s": 6.9,
+      "max_s": 9.25,
+      "failed": 159.5,
+      "actions": [
+        "cache_bypass"
+      ]
+    },
+    "redis_down|llm_agent": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 15.625,
+      "min_s": 11.45,
+      "max_s": 19.8,
+      "failed": 305,
+      "actions": [
+        "restart_redis"
+      ]
+    },
+    "redis_down|llm_sre": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 3.125,
+      "min_s": 3.0,
+      "max_s": 3.25,
+      "failed": 60.5,
+      "actions": [
+        "cache_bypass"
+      ]
+    },
+    "redis_down|llm": {
+      "n": 2,
+      "recovered": 2,
+      "median_s": 4.1,
+      "min_s": 3.95,
+      "max_s": 4.25,
+      "failed": 74.5,
+      "actions": [
+        "restart_redis"
+      ]
+    }
+  },
+  "ablation_trials": 56,
+  "oncall_score": {
+    "faults": 27,
+    "caught": 27,
+    "healed": 23,
+    "median_detect_s": 11.8,
+    "median_recover_s": 23.9,
+    "incidents": 27,
+    "resolved": 23,
+    "escalated": 4,
+    "median_mitigation_s": 7.7,
+    "approvals": {
+      "approved": 10,
+      "denied": 1
+    }
+  },
+  "timeline_incident": {
+    "incident": 7,
+    "match": {
+      "event": {
+        "id": 7,
+        "at": "2026-11-05T03:29:08.192+00:00",
+        "scenario": "redis_down",
+        "source": "manual",
+        "cleared_at": "2026-11-05T03:29:39.784+00:00"
+      },
+      "incident_id": 7,
+      "status": "resolved",
+      "detect_s": 9.0,
+      "engage_s": 14.0,
+      "recover_s": 21.7
+    },
+    "timeline": [
+      {
+        "t": 0.0,
+        "kind": "alert",
+        "name": "ShopSLOFastBurn",
+        "started_at": "2026-11-05T03:29:17.235Z"
+      },
+      {
+        "t": 4.0,
+        "kind": "confirmed",
+        "error_rate": 1.0,
+        "p95_ms": 512
+      },
+      {
+        "t": 4.6,
+        "kind": "action",
+        "action": "cache_bypass",
+        "verdict": "allowed"
+      },
+      {
+        "t": 11.4,
+        "kind": "step_done",
+        "action": "cache_bypass",
+        "healed": true
+      },
+      {
+        "t": 15.5,
+        "kind": "resolved",
+        "mitigation_s": 7.7
+      }
+    ]
+  },
+  "campaign": {
+    "redis_down": {
+      "n": 3,
+      "healed": 3,
+      "detect_s": 10.2,
+      "engage_s": 14.7,
+      "recover_s": 21.7,
+      "actions": [
+        "cache_bypass"
+      ]
+    },
+    "redis_latency": {
+      "n": 3,
+      "healed": 3,
+      "detect_s": 11.1,
+      "engage_s": 15.8,
+      "recover_s": 22.4,
+      "actions": [
+        "cache_bypass"
+      ]
+    },
+    "postgres_latency": {
+      "n": 3,
+      "healed": 3,
+      "detect_s": 12.3,
+      "engage_s": 17.2,
+      "recover_s": 81.9,
+      "actions": [
+        "restart_postgres,warm_cache",
+        "warm_cache"
+      ]
+    },
+    "postgres_down": {
+      "n": 3,
+      "healed": 3,
+      "detect_s": 14.5,
+      "engage_s": 19.0,
+      "recover_s": 34.7,
+      "actions": [
+        "restart_postgres"
+      ]
+    },
+    "api_crash": {
+      "n": 3,
+      "healed": 3,
+      "detect_s": 12.8,
+      "engage_s": 17.4,
+      "recover_s": 36.3,
+      "actions": [
+        "restart_api"
+      ]
+    },
+    "redis_partition": {
+      "n": 3,
+      "healed": 3,
+      "detect_s": 11.5,
+      "engage_s": 16.1,
+      "recover_s": 21.0,
+      "actions": [
+        "cache_bypass"
+      ]
+    },
+    "redis_down_slow_db": {
+      "n": 3,
+      "healed": 0,
+      "detect_s": 10.0,
+      "engage_s": 14.4,
+      "recover_s": null,
+      "actions": [
+        "cache_bypass,restart_postgres",
+        "cache_bypass,restart_postgres,restart_redis"
+      ]
+    }
+  },
+  "campaign_rows": [
+    {
+      "scenario": "redis_down",
+      "event_id": 7,
+      "incident_id": 7,
+      "status": "resolved",
+      "actions": "cache_bypass",
+      "blocked": "",
+      "approvals": 0,
+      "mitigation_s": 7.7,
+      "detect_s": 9.0,
+      "engage_s": 14.0,
+      "recover_s": 21.7,
+      "policy": "heuristic",
+      "rep": 1
+    },
+    {
+      "scenario": "redis_latency",
+      "event_id": 8,
+      "incident_id": 8,
+      "status": "resolved",
+      "actions": "cache_bypass",
+      "blocked": "",
+      "approvals": 0,
+      "mitigation_s": 6.9,
+      "detect_s": 10.3,
+      "engage_s": 15.2,
+      "recover_s": 22.1,
+      "policy": "heuristic",
+      "rep": 1
+    },
+    {
+      "scenario": "postgres_latency",
+      "event_id": 9,
+      "incident_id": 9,
+      "status": "resolved",
+      "actions": "restart_postgres,warm_cache",
+      "blocked": "",
+      "approvals": 1,
+      "mitigation_s": 64.7,
+      "detect_s": 12.3,
+      "engage_s": 17.2,
+      "recover_s": 81.9,
+      "policy": "heuristic",
+      "rep": 1
+    },
+    {
+      "scenario": "postgres_down",
+      "event_id": 10,
+      "incident_id": 10,
+      "status": "resolved",
+      "actions": "restart_postgres",
+      "blocked": "",
+      "approvals": 1,
+      "mitigation_s": 25.7,
+      "detect_s": 15.0,
+      "engage_s": 19.8,
+      "recover_s": 45.5,
+      "policy": "heuristic",
+      "rep": 1
+    },
+    {
+      "scenario": "api_crash",
+      "event_id": 11,
+      "incident_id": 11,
+      "status": "resolved",
+      "actions": "restart_api",
+      "blocked": "",
+      "approvals": 0,
+      "mitigation_s": 22.5,
+      "detect_s": 13.5,
+      "engage_s": 18.4,
+      "recover_s": 40.9,
+      "policy": "heuristic",
+      "rep": 1
+    },
+    {
+      "scenario": "redis_partition",
+      "event_id": 12,
+      "incident_id": 12,
+      "status": "resolved",
+      "actions": "cache_bypass",
+      "blocked": "",
+      "approvals": 0,
+      "mitigation_s": 6.0,
+      "detect_s": 12.9,
+      "engage_s": 17.7,
+      "recover_s": 23.7,
+      "policy": "heuristic",
+      "rep": 1
+    },
+    {
+      "scenario": "redis_down_slow_db",
+      "event_id": 13,
+      "incident_id": 13,
+      "status": "escalated",
+      "actions": "cache_bypass,restart_postgres",
+      "blocked": "",
+      "approvals": 1,
+      "mitigation_s": null,
+      "detect_s": 13.4,
+      "engage_s": 18.1,
+      "recover_s": null,
+      "policy": "heuristic",
+      "rep": 1
+    },
+    {
+      "scenario": "redis_down",
+      "event_id": 14,
+      "incident_id": 14,
+      "status": "resolved",
+      "actions": "cache_bypass",
+      "blocked": "",
+      "approvals": 0,
+      "mitigation_s": 6.6,
+      "detect_s": 10.7,
+      "engage_s": 15.4,
+      "recover_s": 22.0,
+      "policy": "heuristic",
+      "rep": 2
+    },
+    {
+      "scenario": "redis_latency",
+      "event_id": 15,
+      "incident_id": 15,
+      "status": "resolved",
+      "actions": "cache_bypass",
+      "blocked": "",
+      "approvals": 0,
+      "mitigation_s": 6.6,
+      "detect_s": 11.1,
+      "engage_s": 15.8,
+      "recover_s": 22.4,
+      "policy": "heuristic",
+      "rep": 2
+    },
+    {
+      "scenario": "postgres_latency",
+      "event_id": 16,
+      "incident_id": 16,
+      "status": "resolved",
+      "actions": "warm_cache",
+      "blocked": "",
+      "approvals": 0,
+      "mitigation_s": 11.5,
+      "detect_s": 11.8,
+      "engage_s": 16.4,
+      "recover_s": 27.9,
+      "policy": "heuristic",
+      "rep": 2
+    },
+    {
+      "scenario": "postgres_down",
+      "event_id": 17,
+      "incident_id": 17,
+      "status": "resolved",
+      "actions": "restart_postgres",
+      "blocked": "",
+      "approvals": 1,
+      "mitigation_s": 16.8,
+      "detect_s": 13.2,
+      "engage_s": 17.8,
+      "recover_s": 34.6,
+      "policy": "heuristic",
+      "rep": 2
+    },
+    {
+      "scenario": "api_crash",
+      "event_id": 18,
+      "incident_id": 18,
+      "status": "resolved",
+      "actions": "restart_api",
+      "blocked": "",
+      "approvals": 0,
+      "mitigation_s": 18.9,
+      "detect_s": 12.8,
+      "engage_s": 17.4,
+      "recover_s": 36.3,
+      "policy": "heuristic",
+      "rep": 2
+    },
+    {
+      "scenario": "redis_partition",
+      "event_id": 19,
+      "incident_id": 19,
+      "status": "resolved",
+      "actions": "cache_bypass",
+      "blocked": "",
+      "approvals": 0,
+      "mitigation_s": 4.9,
+      "detect_s": 11.5,
+      "engage_s": 16.1,
+      "recover_s": 21.0,
+      "policy": "heuristic",
+      "rep": 2
+    },
+    {
+      "scenario": "redis_down_slow_db",
+      "event_id": 20,
+      "incident_id": 20,
+      "status": "escalated",
+      "actions": "cache_bypass,restart_postgres,restart_redis",
+      "blocked": "warm_cache",
+      "approvals": 1,
+      "mitigation_s": null,
+      "detect_s": 8.9,
+      "engage_s": 13.4,
+      "recover_s": null,
+      "policy": "heuristic",
+      "rep": 2
+    },
+    {
+      "scenario": "redis_down",
+      "event_id": 21,
+      "incident_id": 21,
+      "status": "resolved",
+      "actions": "cache_bypass",
+      "blocked": "",
+      "approvals": 0,
+      "mitigation_s": 5.4,
+      "detect_s": 10.2,
+      "engage_s": 14.7,
+      "recover_s": 20.1,
+      "policy": "heuristic",
+      "rep": 3
+    },
+    {
+      "scenario": "redis_latency",
+      "event_id": 22,
+      "incident_id": 22,
+      "status": "resolved",
+      "actions": "cache_bypass",
+      "blocked": "",
+      "approvals": 0,
+      "mitigation_s": 5.4,
+      "detect_s": 13.2,
+      "engage_s": 17.7,
+      "recover_s": 23.1,
+      "policy": "heuristic",
+      "rep": 3
+    },
+    {
+      "scenario": "postgres_latency",
+      "event_id": 23,
+      "incident_id": 23,
+      "status": "resolved",
+      "actions": "restart_postgres,warm_cache",
+      "blocked": "",
+      "approvals": 1,
+      "mitigation_s": 65.2,
+      "detect_s": 14.2,
+      "engage_s": 18.7,
+      "recover_s": 83.9,
+      "policy": "heuristic",
+      "rep": 3
+    },
+    {
+      "scenario": "postgres_down",
+      "event_id": 24,
+      "incident_id": 24,
+      "status": "resolved",
+      "actions": "restart_postgres",
+      "blocked": "",
+      "approvals": 1,
+      "mitigation_s": 15.7,
+      "detect_s": 14.5,
+      "engage_s": 19.0,
+      "recover_s": 34.7,
+      "policy": "heuristic",
+      "rep": 3
+    },
+    {
+      "scenario": "api_crash",
+      "event_id": 25,
+      "incident_id": 25,
+      "status": "resolved",
+      "actions": "restart_api",
+      "blocked": "",
+      "approvals": 0,
+      "mitigation_s": 20.7,
+      "detect_s": 10.3,
+      "engage_s": 14.7,
+      "recover_s": 35.4,
+      "policy": "heuristic",
+      "rep": 3
+    },
+    {
+      "scenario": "redis_partition",
+      "event_id": 26,
+      "incident_id": 26,
+      "status": "resolved",
+      "actions": "cache_bypass",
+      "blocked": "",
+      "approvals": 0,
+      "mitigation_s": 4.9,
+      "detect_s": 9.8,
+      "engage_s": 14.2,
+      "recover_s": 19.1,
+      "policy": "heuristic",
+      "rep": 3
+    },
+    {
+      "scenario": "redis_down_slow_db",
+      "event_id": 27,
+      "incident_id": 27,
+      "status": "escalated",
+      "actions": "cache_bypass,restart_postgres",
+      "blocked": "",
+      "approvals": 1,
+      "mitigation_s": null,
+      "detect_s": 10.0,
+      "engage_s": 14.4,
+      "recover_s": null,
+      "policy": "heuristic",
+      "rep": 3
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+\section{Background and Related Work}
+\label{sec:related}
+\textbf{Chaos engineering.} Netflix popularised fault injection in production with Chaos Monkey and
+the Simian Army~\cite{izrailevsky2011simian} and formalised the discipline around steady-state
+hypotheses and controlled blast radius~\cite{basiri2016chaos,principlesofchaos}. Tools such as
+Chaos Mesh and LitmusChaos~\cite{chaosmesh,litmus} inject faults into Kubernetes, and
+Toxiproxy~\cite{toxiproxy} simulates network conditions between services. These tools inject faults
+and report impact; they do not compare recovery strategies, learn from outcomes, or gate releases
+on recovery, which is the focus of \sys{}.
+
+\textbf{SRE, SLOs and alerting.} SRE practice measures user experience with SLIs, sets SLOs, and
+treats the complement of the SLO as an error budget~\cite{beyer2016sre}. The SRE
+Workbook~\cite{beyer2018workbook} recommends multi-window, multi-burn-rate alerts: page when the
+budget is consumed $14.4\times$ too fast over both a long and a short window, so that pages are
+both significant and current. We adopt this rule, compressed to lab time scales, and unit-test it.
+Recovery speed is also a core DevOps performance metric (time to restore service)~\cite{forsgren2018accelerate}.
+
+\textbf{Autonomic computing and AIOps.} The MAPE-K loop (monitor, analyse, plan, execute over
+shared knowledge) is the reference architecture for self-managing systems~\cite{kephart2003vision}.
+AIOps applies machine learning to detection, diagnosis and remediation~\cite{dang2019aiops,
+notaro2021survey}; most work targets detection and root-cause analysis rather than the closed
+remediation loop, and evaluations rarely include an explicit safety layer.
+
+\textbf{Bandits.} Contextual bandits choose an action given a context and learn from the observed
+reward; LinUCB~\cite{li2010linucb} keeps a ridge-regression model per action with an upper
+confidence bonus. They suit remediation because each decision has an immediate, measurable outcome
+and logged data are small.
+
+\textbf{LLMs for operations.} LLMs have been used to recommend root causes and mitigation steps for
+cloud incidents~\cite{ahmed2023recommending}, to automate root-cause analysis with retrieved
+context~\cite{chen2024rcacopilot}, and as tool-using agents that query telemetry before
+concluding~\cite{roy2024agents}, following the ReAct pattern of interleaved reasoning and
+acting~\cite{yao2023react}. These studies evaluate diagnoses offline or on historical incidents;
+\sys{} evaluates LLM \emph{actions} on live faults, timed per request, behind a safety shield, and
+isolates the effect of tools with an ablation. We use gpt-4o-mini~\cite{openai2024mini}.
+
+\textbf{Safe automation.} In safe reinforcement learning, a \emph{shield} monitors a learner and
+blocks actions that would violate a specification~\cite{alshiekh2018shielding}. Our safety validator
+is a shield for remediation, combined with human approval for high-impact actions.
+
+\textbf{DevSecOps.} Supply-chain practice adds secret scanning, dependency and image vulnerability
+scanning and software bills of materials (SBOMs)~\cite{ntia2021sbom} to delivery
+pipelines~\cite{humble2010continuous}; \sys{} adds these as gates next to the resilience gate.

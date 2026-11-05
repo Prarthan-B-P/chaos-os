@@ -1,0 +1,26 @@
+\emph{Advice changes the prior.} Without guidance, both LLM variants restarted first on every Redis fault,
+which cost 43--59\,s on the two faults a restart cannot fix (\act{redis\_latency}, \act{redis\_partition}).
+With the SRE paragraph and no tools, the model chose \act{cache\_bypass} first in \emph{all} 14 of its
+trials. This was the fastest LLM behaviour in the study where bypass is right (\act{redis\_latency}
+50.1\,s $\rightarrow$ 3.3\,s, \act{redis\_partition} 43.0\,s $\rightarrow$ 2.3\,s, medians) and harmful
+where a restart is right: it never restarted the crashed database (0/2, against 2/2 in 7.6\,s without
+advice) and bypassed the cache before restarting the crashed API (44.1\,s against 13.2\,s).
+
+\emph{Tools alone cost time without changing decisions.} The tool-using agent called 3.6 tools per
+decision on average (1--5, 45 decisions). Without guidance its first action matched the plain LLM's on
+every fault except \act{postgres\_latency}, where neither helped, so the investigation added 8--12\,s per
+incident (e.g.\ \act{redis\_down} 4.1\,s $\rightarrow$ 15.6\,s) without improving any outcome.
+
+\emph{Together, they are the most robust configuration.} With tools and guidance the agent recovered
+every fault that any LLM variant recovered (10/14). It bypassed the cache on Redis faults (8.0--8.1\,s)
+and, unlike the guided model without tools, restarted the crashed database and API (18.9\,s and 22.1\,s):
+on \act{postgres\_down} it queried readiness, dependency metrics and logs, stated the hypothesis
+``PostgreSQL is down'', and restarted it. The guided model without tools saw the same reachability
+symptom but bypassed the cache, so we attribute the difference to the investigation step (the extra
+evidence, the explicit hypothesis, or both); two trials per cell cannot separate the two. One of its
+two partition trials still restarted first (6.5\,s and 49.5\,s), a reminder that LLM behaviour varies at
+temperature~0.
+
+\emph{What no LLM found.} No variant used \act{warm\_cache} for \act{postgres\_latency} (0/8) or found the
+two-step fix for the compound fault (0/8). The bandit and the expert heuristic, which learned from
+measured outcomes, fix \act{postgres\_latency} reliably (Table~\ref{tab:policies}).
