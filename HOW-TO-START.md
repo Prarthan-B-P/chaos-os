@@ -10,6 +10,27 @@
 3. To stop, double-click **`stop.bat`**. Nothing is deleted; your experiment
    history and Jenkins data stay.
 
+## Share it online (public link with a login)
+
+Double-click **`share.bat`**. It starts everything like `start.bat`, then opens a
+free Cloudflare tunnel and opens the public `https://....trycloudflare.com` link
+in your browser. Send that link to anyone who should see the project.
+
+- **Login:** user `admin`, password = the `dashboard_password` line in
+  `deploy\secrets.yml` (create it from `deploy\secrets.example.yml` the first time).
+- The link changes every time and works while the laptop is awake.
+- Jenkins stays private on `http://localhost:8081`.
+- Stop sharing: run `share.bat stop` (back to local mode), or `stop.bat` to stop everything.
+
+## Passwords
+
+| What | Login |
+|---|---|
+| Local dashboard (localhost:8090) | none (only on your laptop) |
+| Shared online link | `admin` + `dashboard_password` from `deploy\secrets.yml` |
+| Grafana | `admin` / `admin` locally; online it is behind the same login |
+| Jenkins | the user you created when you first unlocked Jenkins |
+
 ## What you need (one time)
 
 - **Docker Desktop** installed (WSL2 backend), with 8 GB RAM or more for it.

@@ -73,6 +73,7 @@ try {
     Write-Host "  Log in as '$($secrets.dashboard_user)' with the password in deploy\secrets.yml"
     Write-Host "  Grafana: $url/grafana"
     Write-Host "  Online while this computer is awake. Stop: .\deploy\share.ps1 -Stop"
+    Start-Process $url   # open the public link in the browser
 }
 finally {
     foreach ($name in $vars) { Remove-Item "Env:$name" -ErrorAction SilentlyContinue }

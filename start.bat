@@ -24,7 +24,8 @@ exit /b 1
 echo       Docker is running.
 
 echo [2/4] Starting the lab (first time: builds images, takes several minutes)...
-docker compose up -d --build --wait
+rem --remove-orphans: if share.bat was used before, drop its tunnel and proxy (back to local mode)
+docker compose up -d --build --wait --remove-orphans
 if errorlevel 1 (
   echo       ERROR: the lab did not become healthy. See: docker compose ps
   pause
