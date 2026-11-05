@@ -300,6 +300,8 @@ recover) while `main` stays green.
 
 ## Quick start
 
+**Windows: double-click `start.bat`** (and `stop.bat` to stop). Step by step: [HOW-TO-START.md](HOW-TO-START.md).
+
 Prerequisites: Docker Desktop (WSL2 backend, 8 GB+), Git. Python 3.10+ only for
 the host smoke test.
 
